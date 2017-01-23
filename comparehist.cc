@@ -9,9 +9,9 @@ int main()
 {
   // Create a TChain
   TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/SimBeta/SimAnalyzed_2010_Beta_b_0_paramSet_42", treeName, 1);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/SimFierz/SimAnalyzed_2010_Beta_b_inf_paramSet_42", treeName, 1);
-  TChain *dataChain = MakeTChain("Data/Simb_1/SimAnalyzed_2010_Beta_FierzIs1_paramSet_42", treeName, 1);
+  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 20);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 20);
+  TChain *dataChain = MakeTChain("Data/Sim_b_1/SimAnalyzed_2010_Beta_b_1_paramSet_42", treeName, 1);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
@@ -32,7 +32,7 @@ int main()
   int status = fit->Fit();	// perform the fit
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
 
-  // Get valuable numbers and add them to the legend
+  // Get valuable numbers for later
   double chisquared = fit->GetChisquare();
   int ndf = fit->GetNDF();
   double frac0Val, frac0Err, frac1Val, frac1Err;
@@ -49,7 +49,7 @@ int main()
   PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
   PlotHist(C, 1, 2, resultHist, "", "SAME");
 
-  // update the legend to include those variables.
+  // update the legend to include valuable variables.
   TPaveStats *ps = (TPaveStats*)C->GetPrimitive("stats");
   ps->SetName("mystats");
   TList *listOfLines = ps->GetListOfLines();
