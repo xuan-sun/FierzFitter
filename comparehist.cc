@@ -34,23 +34,39 @@ int main()
 
   // Get valuable numbers and add them to the legend
   double chisquared = fit->GetChisquare();
-  double ndf = fit->GetNDF();
+  int ndf = fit->GetNDF();
   double frac0Val, frac0Err, frac1Val, frac1Err;
   fit->GetResult(0, frac0Val, frac0Err);
   fit->GetResult(1, frac1Val, frac1Err);
-
-  // Add everything to legend.
-
 
   // plot everything and visualize
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT->SetStyle("Plain");	//on my computer this sets background to white, finally!
   gStyle->SetOptFit(1111);
-  gStyle->SetOptStat("em");
+  gStyle->SetOptStat("en");
+  gStyle->SetStatH(0.45);
+  gStyle->SetStatW(0.45);
   PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
   PlotHist(C, 1, 2, resultHist, "", "SAME");
 
-  //prints the canvas with a dynamic TString name of the name of the file
+  // update the legend to include those variables.
+  TPaveStats *ps = (TPaveStats*)C->GetPrimitive("stats");
+  ps->SetName("mystats");
+  TList *listOfLines = ps->GetListOfLines();
+  TLatex *myText1 = new TLatex(0,0,Form("#Chi^{2} = %f", chisquared));
+  listOfLines->Add(myText1);
+  TLatex *myText2 = new TLatex(0,0,Form("NDF = %d", ndf));
+  listOfLines->Add(myText2);
+  TLatex *myText3 = new TLatex(0,0,Form("#frac{#Chi^{2}}{NDF} = %f", chisquared/ndf));
+  listOfLines->Add(myText3);
+  TLatex *myText4 = new TLatex(0,0,Form("Beta = %f #pm %f", frac0Val, frac0Err));
+  listOfLines->Add(myText4);
+  TLatex *myText5 = new TLatex(0,0,Form("Fierz = %f #pm %f", frac1Val, frac1Err));
+  listOfLines->Add(myText5);
+  // the following line is needed to avoid that the automatic redrawing of stats
+  dataHist->SetStats(0);
+
+  // prints the canvas with a dynamic TString name of the name of the file
   C -> Print(Form("%s.pdf", HIST_IMAGE_PRINTOUT_NAME));
   cout << "-------------- End of Program ---------------" << endl;
   plot_program.Run();
@@ -87,6 +103,7 @@ void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString 
   }
 
   hPlot -> Draw(command);
+  C -> Update();
 }
 
 void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraphErrors* gPlot, TString title, TString command)
