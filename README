@@ -3,3 +3,5 @@ Xuan Sun
 
 This is the directory for the FierzFitter that I am trying to write.
 
+All data/simulation files should be put in the directory called Data/ located at the base level of this repo.
+The .gitignore will leave those alone.
