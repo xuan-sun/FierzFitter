@@ -9,13 +9,13 @@ int main()
 {
   // Create a TChain
   TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 20);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 20);
-  TChain *dataChain = MakeTChain("Data/Sim_b_1/SimAnalyzed_2010_Beta_b_1_paramSet_42", treeName, 1);
+  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 1, 20);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 1, 20);
+  TChain *dataChain = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 1);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
-  TString cutsUsed = Form("type != 4 && side !=2");
+  TString cutsUsed = Form("type ==0 && side !=2");
   TH1D* dataHist = ExtractHistFromChain(variableName, cutsUsed, dataChain,
 				      "myHist", "Test of comparehist code", 100, 0, 1000);
   TH1D* mcTheoryHistBeta = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainBeta,
@@ -28,8 +28,13 @@ int main()
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory);	// initialise
-  fit -> SetRangeX(5, 65);	// Set range in bin numbers
+  fit -> SetRangeX(10, 60);	// Set range in bin numbers
   int status = fit->Fit();	// perform the fit
+  if(status != 0)
+  {
+    cout << "Fit straight up didn't work. Leaving program." << endl;
+    return 0;
+  }
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
 
   // Get valuable numbers for later
@@ -149,11 +154,11 @@ TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
   return hist;
 }
 
-TChain* MakeTChain(TString baseName, TString treeName, int nbFiles)
+TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax)
 {
   TChain* chain = new TChain(treeName.Data());
 
-  for(int i = 0; i < nbFiles; i++)
+  for(int i = fileNumMin; i < fileNumMax; i++)
   {
     chain -> AddFile(Form("%s_%i.root", baseName.Data(), i));
   }

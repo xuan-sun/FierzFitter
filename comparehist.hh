@@ -46,7 +46,7 @@ using            namespace std;
 // forward declarations of functions used
 void PlotHist(TCanvas *C, int styleIndex, int canvaxIndex, TH1D *hPlot, TString title, TString command);
 void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraphErrors* gPlot, TString title, TString command);
-TChain* MakeTChain(TString baseName, TString treeName, int nbFiles);
+TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax);
 TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
 			   TString name, TString title, int nbBins, double minX, double maxX);
 
