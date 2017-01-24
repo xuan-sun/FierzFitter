@@ -11,7 +11,7 @@ int main()
   TString treeName = Form("SimAnalyzed");
   TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 1, 20);
   TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 1, 20);
-  TChain *dataChain = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 1);
+  TChain *dataChain = MakeTChain("Data/Sim_b_1/SimAnalyzed_2010_Beta_FierzIs1_paramSet_42", treeName, 0, 1);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
@@ -28,14 +28,19 @@ int main()
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory);	// initialise
+  TVirtualFitter* vfit = fit->GetFitter();
   fit -> SetRangeX(10, 60);	// Set range in bin numbers
-  int status = fit->Fit();	// perform the fit
+  int status = fit->Fit();
   if(status != 0)
   {
-    cout << "Fit straight up didn't work. Leaving program." << endl;
+    cout << "Fit straight up didn't work. Getting out now." << endl;
     return 0;
   }
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
+
+  // This works and returns the elements of the covariance matrix. Indexed from 0.
+  cout  << "Testing TVirtualFitter. What is the return of GetCovarianceMatrixElement? "
+	<< vfit->GetCovarianceMatrixElement(2, 2) << endl;
 
   // Get valuable numbers for later
   double chisquared = fit->GetChisquare();
