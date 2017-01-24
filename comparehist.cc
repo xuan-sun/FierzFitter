@@ -40,7 +40,7 @@ int main()
 
   // This works and returns the elements of the covariance matrix. Indexed from 0.
   cout  << "Testing TVirtualFitter. What is the return of GetCovarianceMatrixElement? "
-	<< vfit->GetCovarianceMatrixElement(2, 2) << endl;
+	<< vfit->GetCovarianceMatrixElement(0, 0) << endl;
 
   // Get valuable numbers for later
   double chisquared = fit->GetChisquare();
@@ -49,6 +49,25 @@ int main()
   fit->GetResult(0, frac0Val, frac0Err);
   fit->GetResult(1, frac1Val, frac1Err);
 
+  // TESTING STUFF. Using my own chisquared calculator.
+  TH1D* hmc = new TH1D("test", "test", 100, 0, 1000);
+  hmc -> Add(mcTheoryHistBeta, mcTheoryHistFierz, frac0Val, frac1Val);
+  double norm = dataHist->GetEntries() / hmc -> GetEntries();
+  hmc -> Scale(norm);
+
+  double a = 0;
+  for(int i = 10; i <= 60; i++)
+  {
+   a = a + ((dataHist->GetBinContent(i) - resultHist->GetBinContent(i))*
+                             (dataHist->GetBinContent(i) - resultHist->GetBinContent(i)))/
+                            resultHist->GetBinContent(i);
+  }
+  cout << "Value of chisquare using the TFractionFitter histogram: " << a << endl;
+  cout << "Value of chisquare from my function: " << CalculateChiSquared(dataHist, mcTheoryHistBeta, mcTheoryHistFierz,
+								      frac0Val, frac1Val, 10, 60) << endl;
+  cout << "Value of chisquare from TFractionFitter: " << chisquared << endl;
+  // TESTING STUFF ABOVE HERE.
+
   // plot everything and visualize
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT->SetStyle("Plain");	//on my computer this sets background to white, finally!
@@ -56,8 +75,9 @@ int main()
   gStyle->SetOptStat("en");
   gStyle->SetStatH(0.45);
   gStyle->SetStatW(0.45);
-  PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
-  PlotHist(C, 1, 2, resultHist, "", "SAME");
+//  PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
+  PlotHist(C, 1, 1, resultHist, "", "");
+  PlotHist(C, 2, 1, hmc, "", "SAME");
 
   // update the legend to include valuable variables.
   TPaveStats *ps = (TPaveStats*)C->GetPrimitive("stats");
@@ -96,14 +116,14 @@ void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString 
   if(styleIndex == 1)
   {
     hPlot -> SetFillColor(46);
-//    hPlot -> SetFillStyle(3004);
-    hPlot -> SetFillStyle(3001);
+    hPlot -> SetFillStyle(3004);
+//    hPlot -> SetFillStyle(3001);
   }
   if(styleIndex == 2)
   {
     hPlot -> SetFillColor(38);
-//    hPlot -> SetFillStyle(3005);
-    hPlot -> SetFillStyle(3001);
+    hPlot -> SetFillStyle(3005);
+//    hPlot -> SetFillStyle(3001);
   }
   if(styleIndex == 3)
   {
@@ -171,4 +191,27 @@ TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileN
   cout << "Loaded trees from files identified by the template: " << baseName.Data() << "_#.root" << endl;
 
   return chain;
+}
+
+double CalculateChiSquared(TH1D* hdat, TH1D* hthBeta, TH1D* hthFierz, double frac0, double frac1, double xBinMin, double xBinMax)
+{
+
+  TH1D* hmc = new TH1D("MCHist", "MCHist", 100, 0, 1000);
+
+  hmc -> Add(hthBeta, hthFierz, frac0, frac1);
+
+  double norm = hdat->GetEntries() / hmc -> GetEntries();
+
+  hmc -> Scale(norm);
+
+  double chisquare = 0;
+
+  for(int i = xBinMin; i <= xBinMax; i++)
+  {
+    chisquare = chisquare + ((hdat->GetBinContent(i) - hmc->GetBinContent(i))*
+			     (hdat->GetBinContent(i) - hmc->GetBinContent(i)))/
+			    hmc->GetBinContent(i);
+  }
+
+  return chisquare;
 }

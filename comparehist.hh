@@ -49,6 +49,7 @@ void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraphErrors* gPlot,
 TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax);
 TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
 			   TString name, TString title, int nbBins, double minX, double maxX);
+double CalculateChiSquared(TH1D* hdat, TH1D* hthBeta, TH1D* hthFierz, double frac0, double frac1, double xBinMin, double xBinMax);
 
 // global TF1's to be accessed by the structs in order to have proper scope
 // This is poorly coded and needs to be here for fsum() to access it.
