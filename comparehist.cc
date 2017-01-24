@@ -9,9 +9,9 @@ int main()
 {
   // Create a TChain
   TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 1, 20);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 1, 20);
-  TChain *dataChain = MakeTChain("Data/Sim_b_1/SimAnalyzed_2010_Beta_FierzIs1_paramSet_42", treeName, 0, 1);
+  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 20);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 20);
+  TChain *dataChain = MakeTChain("Data/Sim_b_1/8mill_beta_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 8);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
@@ -27,7 +27,7 @@ int main()
   TObjArray *MCTheory = new TObjArray(2);
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
-  TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory);	// initialise
+  TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
   TVirtualFitter* vfit = fit->GetFitter();
   fit -> SetRangeX(10, 60);	// Set range in bin numbers
   int status = fit->Fit();
@@ -49,25 +49,6 @@ int main()
   fit->GetResult(0, frac0Val, frac0Err);
   fit->GetResult(1, frac1Val, frac1Err);
 
-  // TESTING STUFF. Using my own chisquared calculator.
-  TH1D* hmc = new TH1D("test", "test", 100, 0, 1000);
-  hmc -> Add(mcTheoryHistBeta, mcTheoryHistFierz, frac0Val, frac1Val);
-  double norm = dataHist->GetEntries() / hmc -> GetEntries();
-  hmc -> Scale(norm);
-
-  double a = 0;
-  for(int i = 10; i <= 60; i++)
-  {
-   a = a + ((dataHist->GetBinContent(i) - resultHist->GetBinContent(i))*
-                             (dataHist->GetBinContent(i) - resultHist->GetBinContent(i)))/
-                            resultHist->GetBinContent(i);
-  }
-  cout << "Value of chisquare using the TFractionFitter histogram: " << a << endl;
-  cout << "Value of chisquare from my function: " << CalculateChiSquared(dataHist, mcTheoryHistBeta, mcTheoryHistFierz,
-								      frac0Val, frac1Val, 10, 60) << endl;
-  cout << "Value of chisquare from TFractionFitter: " << chisquared << endl;
-  // TESTING STUFF ABOVE HERE.
-
   // plot everything and visualize
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT->SetStyle("Plain");	//on my computer this sets background to white, finally!
@@ -75,9 +56,8 @@ int main()
   gStyle->SetOptStat("en");
   gStyle->SetStatH(0.45);
   gStyle->SetStatW(0.45);
-//  PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
-  PlotHist(C, 1, 1, resultHist, "", "");
-  PlotHist(C, 2, 1, hmc, "", "SAME");
+  PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
+  PlotHist(C, 2, 1, resultHist, "", "SAME");
 
   // update the legend to include valuable variables.
   TPaveStats *ps = (TPaveStats*)C->GetPrimitive("stats");
@@ -210,7 +190,7 @@ double CalculateChiSquared(TH1D* hdat, TH1D* hthBeta, TH1D* hthFierz, double fra
   {
     chisquare = chisquare + ((hdat->GetBinContent(i) - hmc->GetBinContent(i))*
 			     (hdat->GetBinContent(i) - hmc->GetBinContent(i)))/
-			    hmc->GetBinContent(i);
+			    hdat->GetBinContent(i);
   }
 
   return chisquare;
