@@ -15,7 +15,7 @@ int main()
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
-  TString cutsUsed = Form("type ==0 && side !=2");
+  TString cutsUsed = Form("type == 0 && side != 2");
   TH1D* dataHist = ExtractHistFromChain(variableName, cutsUsed, dataChain,
 				      "myHist", "Test of comparehist code", 100, 0, 1000);
   TH1D* mcTheoryHistBeta = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainBeta,
@@ -28,8 +28,10 @@ int main()
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
-  TVirtualFitter* vfit = fit->GetFitter();
-  fit -> SetRangeX(10, 60);	// Set range in bin numbers
+//  TVirtualFitter* vfit = fit->GetFitter();
+  int fitMin = 10;
+  int fitMax = 60;
+  fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
   int status = fit->Fit();
   if(status != 0)
   {
@@ -38,9 +40,12 @@ int main()
   }
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
 
+  double avg_mE = CalculateAveragemOverE(mcTheoryHistBeta, fitMin, fitMax);
+  cout << "Our average value and hence scaling factor is: " << avg_mE << endl;
+
   // This works and returns the elements of the covariance matrix. Indexed from 0.
-  cout  << "Testing TVirtualFitter. What is the return of GetCovarianceMatrixElement? "
-	<< vfit->GetCovarianceMatrixElement(0, 0) << endl;
+//  cout  << "Testing TVirtualFitter. What is the return of GetCovarianceMatrixElement? "
+//	<< vfit->GetCovarianceMatrixElement(0, 0) << endl;
 
   // Get valuable numbers for later
   double chisquared = fit->GetChisquare();
@@ -48,6 +53,11 @@ int main()
   double frac0Val, frac0Err, frac1Val, frac1Err;
   fit->GetResult(0, frac0Val, frac0Err);
   fit->GetResult(1, frac1Val, frac1Err);
+
+  double bErr = Fierz_b_Error(frac0Val, frac0Err, frac1Val, frac1Err, avg_mE, -0.989);
+  cout << "b error without the m/E term: " << bErr << endl;
+  cout << "Also b value without m/E term: " << frac1Val/(frac0Val*avg_mE) << endl;
+  cout << "To compare, the limitation from 100KeV and up is: " << 10.1/sqrt(dataHist->GetEntries()) << endl;
 
   // plot everything and visualize
   TCanvas *C = new TCanvas("canvas", "canvas");
@@ -58,6 +68,9 @@ int main()
   gStyle->SetStatW(0.45);
   PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
   PlotHist(C, 2, 1, resultHist, "", "SAME");
+//  PlotHist(C, 1, 1, mcTheoryHistBeta, "", "");
+//  PlotHist(C, 2, 1, mcTheoryHistFierz, "", "SAME");
+
 
   // update the legend to include valuable variables.
   TPaveStats *ps = (TPaveStats*)C->GetPrimitive("stats");
@@ -175,17 +188,12 @@ TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileN
 
 double CalculateChiSquared(TH1D* hdat, TH1D* hthBeta, TH1D* hthFierz, double frac0, double frac1, double xBinMin, double xBinMax)
 {
-
   TH1D* hmc = new TH1D("MCHist", "MCHist", 100, 0, 1000);
-
   hmc -> Add(hthBeta, hthFierz, frac0, frac1);
-
   double norm = hdat->GetEntries() / hmc -> GetEntries();
-
   hmc -> Scale(norm);
 
   double chisquare = 0;
-
   for(int i = xBinMin; i <= xBinMax; i++)
   {
     chisquare = chisquare + ((hdat->GetBinContent(i) - hmc->GetBinContent(i))*
@@ -194,4 +202,28 @@ double CalculateChiSquared(TH1D* hdat, TH1D* hthBeta, TH1D* hthFierz, double fra
   }
 
   return chisquare;
+}
+
+double CalculateAveragemOverE(TH1D* gammaSM, int binMin, int binMax)
+{
+  double num = 0;
+  double denom = 0;
+
+  for(int i = binMin; i < binMax; i++)
+  {
+    num = num + (m_e*gammaSM->GetBinContent(i)) / (gammaSM->GetBinCenter(i) + m_e);
+    denom = denom + gammaSM->GetBinContent(i);
+  }
+
+  return num/denom;
+}
+
+double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgInverseW, double corrCoeff)
+{
+  double errb = 0;
+
+  errb = (f1v/(f0v*avgInverseW))
+	 * sqrt((f0e/f0v)*(f0e/f0v) + (f1e/f1v)*(f1e/f1v) - (2*f0e*f1e*corrCoeff) / (f0v*f1v));
+
+  return errb;
 }

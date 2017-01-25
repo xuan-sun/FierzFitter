@@ -41,15 +41,25 @@
 #include	 <TFractionFitter.h>
 #include	 <TLatex.h>
 #include 	 <TMatrixD.h>
+
 using            namespace std;
 
-// forward declarations of functions used
+// Fundamental constants that get used
+const double m_e = 511.00;                                              ///< electron mass, keV/c^2
+
+// Plot things for visualisation
 void PlotHist(TCanvas *C, int styleIndex, int canvaxIndex, TH1D *hPlot, TString title, TString command);
 void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraphErrors* gPlot, TString title, TString command);
+
+// Used to load files and make getting data from ROOT objects easier
 TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax);
 TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
 			   TString name, TString title, int nbBins, double minX, double maxX);
+
+// Perform a few useful, simple calculations
 double CalculateChiSquared(TH1D* hdat, TH1D* hthBeta, TH1D* hthFierz, double frac0, double frac1, double xBinMin, double xBinMax);
+double CalculateAveragemOverE(TH1D* gammaSM, int binMin, int binMax);
+double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgInverseW, double coerrCoeff);
 
 // global TF1's to be accessed by the structs in order to have proper scope
 // This is poorly coded and needs to be here for fsum() to access it.
