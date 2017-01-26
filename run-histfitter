@@ -1,0 +1,27 @@
+#!/bin/bash
+# Linux/UNIX box with ssh key based login enabled
+# SSH User name
+
+# in this loop, set the number of .mac files you want to generate
+# this loop variable also counts the Evts_#.root trees you read in. Only used for betas
+sleep 2h
+
+for ((x = 200; x < 300; x = x + 1))
+
+do
+
+rm histfitter.cc
+
+sed 's/ReplaceWithIndexLow/'$x'/g' master_histfitter.cc > histfitter.cc
+# this -i seems to suppress printing out the file to screen. Use it.
+sed -i 's/ReplaceWithIndexHigh/'$((x+1))'/g' histfitter.cc
+
+make
+
+./histfitter
+
+make clean
+
+done
+
+echo "Done running bash script"

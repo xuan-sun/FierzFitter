@@ -1,64 +1,47 @@
 #include	"comparehist.hh"
 
-#define		HIST_IMAGE_PRINTOUT_NAME	"Test_comparehist"
-
-//required later for plot_program
-TApplication plot_program("FADC_readin",0,0,0,0);
+#define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
+#define		OUTPUT_ANALYSIS_FILE		"Fierz_Analysis_b_0.txt"
 
 int main()
 {
   TString treeName = Form("Evts");
-  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
+  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_200mill/Evts", treeName, 0, 100);
   TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 103, 104);
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_200mill/Evts", treeName
+				, ReplaceWithIndexLow, ReplaceWithIndexHigh);
+
   TString variableName = Form("KE");
   TString cutsUsed = Form("");
-
-/*
-  // Create a TChain
-  TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 10);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 10);
-  TChain *dataChain = MakeTChain("Data/Sim_b_1/8mill_beta_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 1);
-
-  // Get the Erecon histogram out with appropriate cuts
-  TString variableName = Form("Erecon");
-  TString cutsUsed = Form("type == 0 && side != 2");
-*/
-  TH1D* dataHist = ExtractHistFromChain(variableName, cutsUsed, dataChain,
-				      "myHist", "Test of comparehist code", 100, 0, 1000);
   TH1D* mcTheoryHistBeta = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainBeta,
-                                      "mcBeta", "Test of comparehist code", 100, 0, 1000);
+                                      "mcBeta", "Beta", 100, 0, 1000);
   TH1D* mcTheoryHistFierz = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainFierz,
-                                      "mcFierz", "Test of comparehist code", 100, 0, 1000);
+                                      "mcFierz", "Fierz", 100, 0, 1000);
+  TH1D* dataHist = ExtractHistFromChain(variableName, cutsUsed, dataChain, "myHist", "Data", 100, 0, 1000);
 
-  // Create a TFractionFitter and do the fit.
   TObjArray *MCTheory = new TObjArray(2);
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
-  TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
-  TVirtualFitter* vfit = fit->GetFitter();
+  TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "Q");  // initialise
+
   int fitMin = 10;
   int fitMax = 85;
-  fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
-  fit -> Constrain(1, 0.8, 1.2);	// Start indexing at 1!
-  fit -> Constrain(2, -0.2, 0.2);
+  fit -> SetRangeX(fitMin, fitMax);
   int status = fit->Fit();
   if(status != 0)
   {
     cout << "Fit straight up didn't work. Getting out now." << endl;
     return 0;
   }
+
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
   int entries = 0;
   for(int i = fitMin; i < fitMax; i++)
   {
     entries = entries + resultHist->GetBinContent(i);
   }
-  cout << "Number events in fitted histogram (blue): " << entries << endl;
 
   double avg_mE = CalculateAveragemOverE(mcTheoryHistBeta, fitMin, fitMax);
-  cout << "Our average value and hence scaling factor is: " << avg_mE << endl;
 
   // Get valuable numbers for later
   double chisquared = fit->GetChisquare();
@@ -67,46 +50,17 @@ int main()
   fit->GetResult(0, frac0Val, frac0Err);
   fit->GetResult(1, frac1Val, frac1Err);
 
-  double bErr = Fierz_b_Error(frac0Val, frac0Err, frac1Val, frac1Err, avg_mE,
-			      vfit->GetCovarianceMatrixElement(0,0), vfit->GetCovarianceMatrixElement(0,1),
-			      vfit->GetCovarianceMatrixElement(1,0), vfit->GetCovarianceMatrixElement(1,1) );
-  cout << "b error calculated by hand: " << bErr << endl;
-  cout << "b value: " << frac1Val/(frac0Val*avg_mE) << endl;
-  cout << "To compare, the limitation from 100KeV and up is: " << 10.1/sqrt(dataHist->GetEntries()) << endl;
-  cout << "Entries used in theoretical limit: " << dataHist->GetEntries() << endl;
-
-  // plot everything and visualize
-  TCanvas *C = new TCanvas("canvas", "canvas");
-  gROOT->SetStyle("Plain");	//on my computer this sets background to white, finally!
-  gStyle->SetOptFit(1111);
-  gStyle->SetOptStat("en");
-  gStyle->SetStatH(0.45);
-  gStyle->SetStatW(0.45);
-  PlotHist(C, 1, 1, dataHist, "Data histogram", "");
-  PlotHist(C, 2, 1, resultHist, "Fit Result histogram", "SAME");
-
-
-  // update the legend to include valuable variables.
-  TPaveStats *ps = (TPaveStats*)C->GetPrimitive("stats");
-  ps->SetName("mystats");
-  TList *listOfLines = ps->GetListOfLines();
-  TLatex *myText1 = new TLatex(0,0,Form("#Chi^{2} = %f", chisquared));
-  listOfLines->Add(myText1);
-  TLatex *myText2 = new TLatex(0,0,Form("NDF = %d", ndf));
-  listOfLines->Add(myText2);
-  TLatex *myText3 = new TLatex(0,0,Form("#frac{#Chi^{2}}{NDF} = %f", chisquared/ndf));
-  listOfLines->Add(myText3);
-  TLatex *myText4 = new TLatex(0,0,Form("Beta = %f #pm %f", frac0Val, frac0Err));
-  listOfLines->Add(myText4);
-  TLatex *myText5 = new TLatex(0,0,Form("Fierz = %f #pm %f", frac1Val, frac1Err));
-  listOfLines->Add(myText5);
-  // the following line is needed to avoid that the automatic redrawing of stats
-  dataHist->SetStats(0);
-
-  // prints the canvas with a dynamic TString name of the name of the file
-  C -> Print(Form("%s.pdf", HIST_IMAGE_PRINTOUT_NAME));
-  cout << "-------------- End of Program ---------------" << endl;
-  plot_program.Run();
+  ofstream outfile;
+  outfile.open(OUTPUT_ANALYSIS_FILE, ios::app);
+  outfile << frac1Val/(frac0Val*avg_mE) << "\t"
+	  << 10.1/sqrt(dataHist->GetEntries()) << "\t"
+          << fitMin << "\t" << fitMax << "\t"
+	  << entries << "\t"
+          << "Evts_" << ReplaceWithIndexLow << ".root" << "\t"
+	  << chisquared << "\t"
+	  << ndf << "\t"
+	  << chisquared/ndf << "\n";
+  outfile.close();
 
   return 0;
 }
@@ -197,7 +151,8 @@ TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileN
     chain -> AddFile(Form("%s_%i.root", baseName.Data(), i));
   }
 
-  cout << "Loaded trees from files identified by the template: " << baseName.Data() << "_#.root" << endl;
+  cout << "Loaded trees from files identified by the template: " << baseName.Data() << "_#.root \n"
+       << "Lower index = " << fileNumMin << " and upper index = " << fileNumMax << endl;
 
   return chain;
 }
