@@ -5,3 +5,9 @@ This is the directory for the FierzFitter that I am trying to write.
 
 All data/simulation files should be put in the directory called Data/ located at the base level of this repo.
 The .gitignore will leave those alone.
+
+comparehist.cc and comparehist.hh will run TFractionFitter once and create a ROOT histogram.
+It will also print several values to screen and save the histogram in a pdf.
+
+master_histfitter.cc will be very similar except it will run TFractionFitter and save the values to file.
+This is designed to work in conjunction with a script that will execute this program over a series of iterations.

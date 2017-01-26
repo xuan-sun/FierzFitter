@@ -59,8 +59,8 @@ TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
 // Perform a few useful, simple calculations
 double CalculateChiSquared(TH1D* hdat, TH1D* hthBeta, TH1D* hthFierz, double frac0, double frac1, double xBinMin, double xBinMax);
 double CalculateAveragemOverE(TH1D* gammaSM, int binMin, int binMax);
-double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgInverseW, double coerrCoeff);
-
+double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgInverseW
+                    , double cov00, double cov01, double cov10, double cov11);
 // global TF1's to be accessed by the structs in order to have proper scope
 // This is poorly coded and needs to be here for fsum() to access it.
 /*TF1 *f1, *f2;

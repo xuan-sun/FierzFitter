@@ -7,15 +7,24 @@ TApplication plot_program("FADC_readin",0,0,0,0);
 
 int main()
 {
+  TString treeName = Form("Evts");
+  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_200mill/Evts", treeName, 0, 100);
+  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0.1/Evts", treeName, 4, 6);
+  TString variableName = Form("KE");
+  TString cutsUsed = Form("");
+
+/*
   // Create a TChain
   TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 20);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 20);
-  TChain *dataChain = MakeTChain("Data/Sim_b_1/8mill_beta_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 8);
+  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 10);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 10);
+  TChain *dataChain = MakeTChain("Data/Sim_b_1/8mill_beta_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 1);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
   TString cutsUsed = Form("type == 0 && side != 2");
+*/
   TH1D* dataHist = ExtractHistFromChain(variableName, cutsUsed, dataChain,
 				      "myHist", "Test of comparehist code", 100, 0, 1000);
   TH1D* mcTheoryHistBeta = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainBeta,
@@ -28,9 +37,9 @@ int main()
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
-//  TVirtualFitter* vfit = fit->GetFitter();
+  TVirtualFitter* vfit = fit->GetFitter();
   int fitMin = 10;
-  int fitMax = 60;
+  int fitMax = 85;
   fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
   int status = fit->Fit();
   if(status != 0)
@@ -39,13 +48,15 @@ int main()
     return 0;
   }
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
+  int entries = 0;
+  for(int i = fitMin; i < fitMax; i++)
+  {
+    entries = entries + resultHist->GetBinContent(i);
+  }
+  cout << "Number events in fitted histogram (blue): " << entries << endl;
 
   double avg_mE = CalculateAveragemOverE(mcTheoryHistBeta, fitMin, fitMax);
   cout << "Our average value and hence scaling factor is: " << avg_mE << endl;
-
-  // This works and returns the elements of the covariance matrix. Indexed from 0.
-//  cout  << "Testing TVirtualFitter. What is the return of GetCovarianceMatrixElement? "
-//	<< vfit->GetCovarianceMatrixElement(0, 0) << endl;
 
   // Get valuable numbers for later
   double chisquared = fit->GetChisquare();
@@ -54,10 +65,13 @@ int main()
   fit->GetResult(0, frac0Val, frac0Err);
   fit->GetResult(1, frac1Val, frac1Err);
 
-  double bErr = Fierz_b_Error(frac0Val, frac0Err, frac1Val, frac1Err, avg_mE, -0.989);
-  cout << "b error without the m/E term: " << bErr << endl;
-  cout << "Also b value without m/E term: " << frac1Val/(frac0Val*avg_mE) << endl;
+  double bErr = Fierz_b_Error(frac0Val, frac0Err, frac1Val, frac1Err, avg_mE,
+			      vfit->GetCovarianceMatrixElement(0,0), vfit->GetCovarianceMatrixElement(0,1),
+			      vfit->GetCovarianceMatrixElement(1,0), vfit->GetCovarianceMatrixElement(1,1) );
+  cout << "b error calculated by hand: " << bErr << endl;
+  cout << "b value: " << frac1Val/(frac0Val*avg_mE) << endl;
   cout << "To compare, the limitation from 100KeV and up is: " << 10.1/sqrt(dataHist->GetEntries()) << endl;
+  cout << "Entries used in theoretical limit: " << dataHist->GetEntries() << endl;
 
   // plot everything and visualize
   TCanvas *C = new TCanvas("canvas", "canvas");
@@ -66,10 +80,8 @@ int main()
   gStyle->SetOptStat("en");
   gStyle->SetStatH(0.45);
   gStyle->SetStatW(0.45);
-  PlotHist(C, 1, 1, dataHist, "Test of non-zero Fierz fit.", "");
-  PlotHist(C, 2, 1, resultHist, "", "SAME");
-//  PlotHist(C, 1, 1, mcTheoryHistBeta, "", "");
-//  PlotHist(C, 2, 1, mcTheoryHistFierz, "", "SAME");
+  PlotHist(C, 1, 1, dataHist, "Data histogram", "");
+  PlotHist(C, 2, 1, resultHist, "Fit Result histogram", "SAME");
 
 
   // update the legend to include valuable variables.
@@ -169,6 +181,8 @@ TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
 
   chain -> Draw(Form("%s >> %s",varName.Data(),name.Data()), cutsUsed.Data());
 
+  cout << "Completed storing histogram of variable " << varName.Data() << " into histogram " << name.Data() << endl;
+
   return hist;
 }
 
@@ -218,12 +232,14 @@ double CalculateAveragemOverE(TH1D* gammaSM, int binMin, int binMax)
   return num/denom;
 }
 
-double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgInverseW, double corrCoeff)
+double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgInverseW
+		    , double cov00, double cov01, double cov10, double cov11)
 {
   double errb = 0;
 
   errb = (f1v/(f0v*avgInverseW))
-	 * sqrt((f0e/f0v)*(f0e/f0v) + (f1e/f1v)*(f1e/f1v) - (2*f0e*f1e*corrCoeff) / (f0v*f1v));
+	 * sqrt((f0e/f0v)*(f0e/f0v) + (f1e/f1v)*(f1e/f1v) - (2*cov01*avgInverseW*f0v*avgInverseW*f1v));
+
 
   return errb;
 }
