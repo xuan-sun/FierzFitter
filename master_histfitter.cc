@@ -1,14 +1,14 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
-#define		OUTPUT_ANALYSIS_FILE		"Fierz_Analysis_b_0.txt"
+#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/Fierz_Analysis_b_0_fullWindow.txt"
 
 int main()
 {
   TString treeName = Form("Evts");
-  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_200mill/Evts", treeName, 0, 100);
+  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
   TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_200mill/Evts", treeName
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName
 				, ReplaceWithIndexLow, ReplaceWithIndexHigh);
 
   TString variableName = Form("KE");
@@ -23,10 +23,30 @@ int main()
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "Q");  // initialise
+  TVirtualFitter* vfit = fit->GetFitter();
 
-  int fitMin = 10;
+  int fitMin = 1;
   int fitMax = 85;
   fit -> SetRangeX(fitMin, fitMax);
+
+  // Setting initial search parameters.
+  int ipar = 0;
+  char name[3] = "a";
+  double value = 0.99999;
+  double valueerr = 0.01;
+  double valuelow = -10;
+  double valuehigh = 10;
+  vfit->SetParameter(ipar, name, value, valueerr, valuelow, valuehigh);
+
+  ipar = 1;
+  char name2[3] = "c";
+  value = 0.00001;
+  valueerr = 0.01;
+  valuelow = -10;
+  valuehigh = 10;
+  vfit->SetParameter(ipar, name2, value, valueerr, valuelow, valuehigh);
+
+
   int status = fit->Fit();
   if(status != 0)
   {

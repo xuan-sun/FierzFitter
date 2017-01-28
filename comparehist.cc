@@ -8,9 +8,9 @@ TApplication plot_program("FADC_readin",0,0,0,0);
 int main()
 {
   TString treeName = Form("Evts");
-  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
-  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 103, 104);
+  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 10);
+  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 10);
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 119, 120);
   TString variableName = Form("KE");
   TString cutsUsed = Form("");
 
@@ -38,11 +38,28 @@ int main()
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
   TVirtualFitter* vfit = fit->GetFitter();
-  int fitMin = 10;
+  int fitMin = 1;
   int fitMax = 85;
   fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
-  fit -> Constrain(1, 0.8, 1.2);	// Start indexing at 1!
-  fit -> Constrain(2, -0.2, 0.2);
+
+  // Setting initial search parameters.
+/*  int ipar = 0;
+  char name[3] = "a";
+  double value = 0.999;
+  double valueerr = 0.1;
+  double valuelow = 0;
+  double valuehigh = 1.5;
+  vfit->SetParameter(ipar, name, value, valueerr, valuelow, valuehigh);
+
+  ipar = 1;
+  char name2[3] = "c";
+  value = 0.001;
+  valueerr = 0.1;
+  valuelow = -1;
+  valuehigh = 1;
+  vfit->SetParameter(ipar, name2, value, valueerr, valuelow, valuehigh);
+*/
+  // perform the fit
   int status = fit->Fit();
   if(status != 0)
   {
@@ -51,11 +68,14 @@ int main()
   }
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
   int entries = 0;
+  int entriesData = 0;
   for(int i = fitMin; i < fitMax; i++)
   {
     entries = entries + resultHist->GetBinContent(i);
+    entriesData = entriesData + dataHist->GetBinContent(i);
   }
   cout << "Number events in fitted histogram (blue): " << entries << endl;
+  cout << "Number events in data histogram (red): " << entriesData << endl;
 
   double avg_mE = CalculateAveragemOverE(mcTheoryHistBeta, fitMin, fitMax);
   cout << "Our average value and hence scaling factor is: " << avg_mE << endl;

@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"test_plotFierz"
-#define		INPUT_DATA_FILE			"Fierz_Analysis_b_0.txt"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/Fierz_Analysis_b_0_fullWindow.txt"
 
 //required later for plot_program
 TApplication plot_program("FADC_readin",0,0,0,0);
