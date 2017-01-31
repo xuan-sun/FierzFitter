@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"test_plotFierz"
-#define		INPUT_DATA_FILE			"AnalyzedTextFiles/Fierz_Analysis_b_0_fullWindow.txt"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow.txt"
 
 //required later for plot_program
 TApplication plot_program("FADC_readin",0,0,0,0);
@@ -12,6 +12,7 @@ void FillArrays(TString fileName, TH1D *hist);
 struct event
 {
   double b;
+  double avg_mOverE;
   double gluckErr;
   int binMin;
   int binMax;
@@ -28,7 +29,7 @@ int main()
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT -> SetStyle("Plain");	//on my computer this sets background to white, finally!
 
-  TH1D *h1 = new TH1D("myhist", "myhist", 20, -0.05, 0.05);
+  TH1D *h1 = new TH1D("myhist", "myhist", 20, 0.90, 1.10);
 
   FillArrays(INPUT_DATA_FILE, h1);
 
@@ -87,6 +88,7 @@ void FillArrays(TString fileName, TH1D* hist)
     if(!bufstream.eof())
     {
       bufstream >> evt.b
+		>> evt.avg_mOverE
 		>> evt.gluckErr
 		>> evt.binMin
 		>> evt.binMax

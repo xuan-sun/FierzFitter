@@ -1,14 +1,14 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
-#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/Fierz_Analysis_b_0_fullWindow.txt"
+#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow.txt"
 
 int main()
 {
   TString treeName = Form("Evts");
   TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
   TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_1/Evts", treeName
 				, ReplaceWithIndexLow, ReplaceWithIndexHigh);
 
   TString variableName = Form("KE");
@@ -32,7 +32,7 @@ int main()
   // Setting initial search parameters.
   int ipar = 0;
   char name[3] = "a";
-  double value = 0.99999;
+  double value = 0.6;
   double valueerr = 0.01;
   double valuelow = -10;
   double valuehigh = 10;
@@ -40,7 +40,7 @@ int main()
 
   ipar = 1;
   char name2[3] = "c";
-  value = 0.00001;
+  value = 0.4;
   valueerr = 0.01;
   valuelow = -10;
   valuehigh = 10;
@@ -73,6 +73,7 @@ int main()
   ofstream outfile;
   outfile.open(OUTPUT_ANALYSIS_FILE, ios::app);
   outfile << frac1Val/(frac0Val*avg_mE) << "\t"
+	  << avg_mE << "\t"
 	  << 10.1/sqrt(dataHist->GetEntries()) << "\t"
           << fitMin << "\t" << fitMax << "\t"
 	  << entries << "\t"

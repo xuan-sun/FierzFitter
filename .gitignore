@@ -3,3 +3,4 @@ Test_comparehist.pdf
 *.o
 LogFiles/*
 AnalyzedTextFiles/*
+*.pdf

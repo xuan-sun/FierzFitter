@@ -8,9 +8,9 @@ TApplication plot_program("FADC_readin",0,0,0,0);
 int main()
 {
   TString treeName = Form("Evts");
-  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 10);
-  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 10);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 119, 120);
+  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
+  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_1/Evts", treeName, 30, 31);
   TString variableName = Form("KE");
   TString cutsUsed = Form("");
 
@@ -31,15 +31,14 @@ int main()
                                       "mcBeta", "Test of comparehist code", 100, 0, 1000);
   TH1D* mcTheoryHistFierz = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainFierz,
                                       "mcFierz", "Test of comparehist code", 100, 0, 1000);
-
   // Create a TFractionFitter and do the fit.
   TObjArray *MCTheory = new TObjArray(2);
   MCTheory -> Add(mcTheoryHistBeta);
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
   TVirtualFitter* vfit = fit->GetFitter();
-  int fitMin = 1;
-  int fitMax = 85;
+  int fitMin = 15;
+  int fitMax = 60;
   fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
 
   // Setting initial search parameters.
@@ -116,9 +115,9 @@ int main()
   listOfLines->Add(myText2);
   TLatex *myText3 = new TLatex(0,0,Form("#frac{#Chi^{2}}{NDF} = %f", chisquared/ndf));
   listOfLines->Add(myText3);
-  TLatex *myText4 = new TLatex(0,0,Form("Beta = %f #pm %f", frac0Val, frac0Err));
+  TLatex *myText4 = new TLatex(0,0,Form("frac0 = %f #pm %f", frac0Val, frac0Err));
   listOfLines->Add(myText4);
-  TLatex *myText5 = new TLatex(0,0,Form("Fierz = %f #pm %f", frac1Val, frac1Err));
+  TLatex *myText5 = new TLatex(0,0,Form("frac1 = %f #pm %f", frac1Val, frac1Err));
   listOfLines->Add(myText5);
   // the following line is needed to avoid that the automatic redrawing of stats
   dataHist->SetStats(0);

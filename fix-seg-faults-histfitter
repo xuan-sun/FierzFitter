@@ -6,12 +6,21 @@
 # Need to fix the seg faulted TFractionFitter results.
 # I know which file numbers didn't work. So I will hand code them now to work.
 
-x=147
+x=27
 rm histfitter.cc
 sed 's/ReplaceWithIndexLow/'$x'/g' master_histfitter.cc > histfitter.cc
 sed -i 's/ReplaceWithIndexHigh/'$((x+1))'/g' histfitter.cc
 make
 ./histfitter
 make clean
+
+x=63
+rm histfitter.cc
+sed 's/ReplaceWithIndexLow/'$x'/g' master_histfitter.cc > histfitter.cc
+sed -i 's/ReplaceWithIndexHigh/'$((x+1))'/g' histfitter.cc
+make
+./histfitter
+make clean
+
 
 rm histfitter.cc
