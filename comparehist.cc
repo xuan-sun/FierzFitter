@@ -10,7 +10,7 @@ int main()
   TString treeName = Form("Evts");
   TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
   TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_1/Evts", treeName, 30, 31);
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 111, 112);
   TString variableName = Form("KE");
   TString cutsUsed = Form("");
 
@@ -37,8 +37,8 @@ int main()
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
   TVirtualFitter* vfit = fit->GetFitter();
-  int fitMin = 15;
-  int fitMax = 60;
+  int fitMin = 1;
+  int fitMax = 85;
   fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
 
   // Setting initial search parameters.
@@ -258,7 +258,7 @@ double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgI
 {
   double errb = 0;
 
-  errb = (f1v/(f0v*avgInverseW))
+  errb = abs(f1v/(f0v*avgInverseW))
 	 * sqrt((f0e/f0v)*(f0e/f0v) + (f1e/f1v)*(f1e/f1v) - (2*cov01*avgInverseW*f0v*avgInverseW*f1v));
 
 

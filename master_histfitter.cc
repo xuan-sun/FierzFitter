@@ -1,14 +1,14 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
-#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow.txt"
+#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow_allValuesPrinted.txt"
 
 int main()
 {
   TString treeName = Form("Evts");
   TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
   TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_1/Evts", treeName
+  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_1_300mill/Evts", treeName
 				, ReplaceWithIndexLow, ReplaceWithIndexHigh);
 
   TString variableName = Form("KE");
@@ -30,7 +30,7 @@ int main()
   fit -> SetRangeX(fitMin, fitMax);
 
   // Setting initial search parameters.
-  int ipar = 0;
+/*  int ipar = 0;
   char name[3] = "a";
   double value = 0.6;
   double valueerr = 0.01;
@@ -45,7 +45,7 @@ int main()
   valuelow = -10;
   valuehigh = 10;
   vfit->SetParameter(ipar, name2, value, valueerr, valuelow, valuehigh);
-
+*/
 
   int status = fit->Fit();
   if(status != 0)
@@ -74,7 +74,13 @@ int main()
   outfile.open(OUTPUT_ANALYSIS_FILE, ios::app);
   outfile << frac1Val/(frac0Val*avg_mE) << "\t"
 	  << avg_mE << "\t"
-	  << 10.1/sqrt(dataHist->GetEntries()) << "\t"
+	  << Fierz_b_Error(frac0Val, frac0Err, frac1Val, frac1Err, avg_mE,
+                              vfit->GetCovarianceMatrixElement(0,0), vfit->GetCovarianceMatrixElement(0,1),
+                              vfit->GetCovarianceMatrixElement(1,0), vfit->GetCovarianceMatrixElement(1,1) ) << "\t"
+	  << frac0Val << "\t"
+	  << frac0Err << "\t"
+	  << frac1Val << "\t"
+	  << frac1Err << "\t"
           << fitMin << "\t" << fitMax << "\t"
 	  << entries << "\t"
           << "Evts_" << ReplaceWithIndexLow << ".root" << "\t"
@@ -215,7 +221,7 @@ double Fierz_b_Error(double f0v, double f0e, double f1v, double f1e, double avgI
 {
   double errb = 0;
 
-  errb = (f1v/(f0v*avgInverseW))
+  errb = abs(f1v/(f0v*avgInverseW))
 	 * sqrt((f0e/f0v)*(f0e/f0v) + (f1e/f1v)*(f1e/f1v) - (2*cov01*avgInverseW*f0v*avgInverseW*f1v));
 
 

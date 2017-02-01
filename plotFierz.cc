@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"test_plotFierz"
-#define		INPUT_DATA_FILE			"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow.txt"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow_allValuesPrinted.txt"
 
 //required later for plot_program
 TApplication plot_program("FADC_readin",0,0,0,0);
@@ -13,7 +13,11 @@ struct event
 {
   double b;
   double avg_mOverE;
-  double gluckErr;
+  double calcErr;
+  double frac0Val;
+  double frac0Err;
+  double frac1Val;
+  double frac1Err;
   int binMin;
   int binMax;
   int entriesFitted;
@@ -29,7 +33,7 @@ int main()
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT -> SetStyle("Plain");	//on my computer this sets background to white, finally!
 
-  TH1D *h1 = new TH1D("myhist", "myhist", 20, 0.90, 1.10);
+  TH1D *h1 = new TH1D("myhist", "myhist", 100, 0, 0.05);
 
   FillArrays(INPUT_DATA_FILE, h1);
 
@@ -89,7 +93,11 @@ void FillArrays(TString fileName, TH1D* hist)
     {
       bufstream >> evt.b
 		>> evt.avg_mOverE
-		>> evt.gluckErr
+		>> evt.calcErr
+		>> evt.frac0Val
+		>> evt.frac0Err
+		>> evt.frac1Val
+		>> evt.frac1Err
 		>> evt.binMin
 		>> evt.binMax
 		>> evt.entriesFitted
@@ -97,8 +105,10 @@ void FillArrays(TString fileName, TH1D* hist)
                 >> evt.chisquared
 		>> evt.ndf
 		>> evt.chisquaredperdof;
-
-      hist -> Fill(evt.b);
+//      if(evt.calcErr > 0.005)
+      {
+        hist -> Fill(evt.calcErr);
+      }
     }
   }
 

@@ -11,3 +11,7 @@ It will also print several values to screen and save the histogram in a pdf.
 
 master_histfitter.cc will be very similar except it will run TFractionFitter and save the values to file.
 This is designed to work in conjunction with a script that will execute this program over a series of iterations.
+
+getvalues.C is a simple macro that will read in a TChain and print the histogram contents to a file.
+
+genCoeff.cc will generate polynomial coefficients and print to a file.
