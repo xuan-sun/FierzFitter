@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"test_plotFierz"
-#define		INPUT_DATA_FILE			"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow_allValuesPrinted.txt"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/Fierz_Analysis_b_1_SimAnalyzed_100-650KeV.txt"
 
 //required later for plot_program
 TApplication plot_program("FADC_readin",0,0,0,0);
@@ -33,7 +33,7 @@ int main()
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT -> SetStyle("Plain");	//on my computer this sets background to white, finally!
 
-  TH1D *h1 = new TH1D("myhist", "myhist", 100, 0, 0.05);
+  TH1D *h1 = new TH1D("myhist", "myhist", 100, 0.5, 1.5);
 
   FillArrays(INPUT_DATA_FILE, h1);
 
@@ -50,9 +50,9 @@ void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString 
 {
   C -> cd(canvasIndex);
   hPlot -> SetTitle(title);
-  hPlot -> GetXaxis() -> SetTitle("Energy (keV)");
+  hPlot -> GetXaxis() -> SetTitle("Extracted b");
   hPlot -> GetXaxis() -> CenterTitle();
-  hPlot -> GetYaxis() -> SetTitle("Hits Rate/Ratio (N/Total)");
+  hPlot -> GetYaxis() -> SetTitle("N(b)");
   hPlot -> GetYaxis() -> CenterTitle();
 //  hPlot -> GetYaxis() -> SetRangeUser(0, 0.000004);
 
@@ -105,10 +105,7 @@ void FillArrays(TString fileName, TH1D* hist)
                 >> evt.chisquared
 		>> evt.ndf
 		>> evt.chisquaredperdof;
-//      if(evt.calcErr > 0.005)
-      {
-        hist -> Fill(evt.calcErr);
-      }
+        hist -> Fill(evt.b);
     }
   }
 

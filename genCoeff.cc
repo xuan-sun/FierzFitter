@@ -47,101 +47,149 @@ using            namespace std;
 const double m_e = 511.00;                                              ///< electron mass, keV/c^2
 
 #define		PARAM_FILE_NAME		"params_2010.txt"
+#define		INPUT_EQ2ETRUE_PARAMS	"/home/xuansun/Documents/ParallelAnalyzer/simulation_comparison/EQ2EtrueConversion/2011-2012_EQ2EtrueFitParams.dat"
 
 void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString title, TString command);
-double SampleGaus(double mean, double sigma);
+void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command);
+vector < vector < vector <double> > > GetEQ2EtrueParams(string geometry);
+double CalculateErecon(double totalEvis, vector < vector < vector <double> > > tempEQ2Etrue, int type, int side);
+double DiffTwoFunctions(double *x, double *p);
 
-//required later for plot_program
 TApplication plot_program("FADC_readin",0,0,0,0);
+
+TF1* fBase;
+TF1* fTwiddle;
+vector <TF1*> fDiff;
+
+struct EreconFunction
+{
+  EreconFunction(vector < vector < vector <double> > > calibrationCoeffs, int type, int side, TF1 *f_var):
+  COEFFS(calibrationCoeffs), TYPE(type), SIDE(side), XAXIS(f_var) {}
+
+  double operator() (double *x, double *p) const
+  {
+    return CalculateErecon(XAXIS->EvalPar(x,p), COEFFS, TYPE, SIDE);
+  }
+
+  vector < vector < vector <double> > > COEFFS;
+  int TYPE;
+  int SIDE;
+  TF1* XAXIS;
+};
+
 
 int main(int argc, char *argv[])
 {
-  if(argc != 2)
+/*  if(argc != 2)
   {
     cout << "Improper format. Needs: (executable) (either 'save' or 'plot)" << endl;
     return 0;
   }
+  // Takes in initial argument and ensures the seed is different for randomizing in ROOT.
   string option = argv[1];
+*/  gRandom->SetSeed(0);		// Makes sure that each call to GetRandom() is different
 
-  gRandom->SetSeed(0);
+  // Generate twiddle polynomials in EQ space.
+  vector <TF1*> twiddles_East;
+  vector <TF1*> twiddles_West;
 
-  double Ce139 = 131.9; 	// KeV central value. +/- 0.1
-  double Sn113 = 368.1; 	// KeV. +/- 0.1
-  double Bi207_low = 502.5; 	// KeV +/- 0.3
-  double Bi207_high = 994.8; 	// KeV +/- 0.5
+  TF1* pure_East = new TF1("pureE", "x", 0, 800);
+  TF1* pure_West = new TF1("pureW", "x", 0, 800);
 
-  double Ce_offset = 0.6;
-  double Ce_error = 1.3;	// error taken from error envelope at Ce139 point.
-  double Sn_offset = -2.1;	// All values taken from page 99, Michael Mendenhall thesis.
-  double Sn_error = 2.3;
-  double Bi2_offset = -0.8;
-  double Bi2_error = 3.2;
-  double Bi1_offset = 2.4;
-  double Bi1_error = 4.2;
-
-  TH1D* hCe = new TH1D("Ce139", "Ce139", 100, 100, 200);
-
-  // Run 4 sets of random samplings of Gaussian functions. Save the doubles returned.
-  // Create a TF1 4th order polynomial using those doubles.
-  // Also print to file those coefficients.
-  vector<double> root1, root2, root3, root4;
-  for(int i = 0; i < 1000; i++)
-  {
-    double randVal = SampleGaus(Ce139 + Ce_offset, Ce_error);
-    root1.push_back(randVal);
-//    hCe->Fill(randVal);
-  }
-
-/*  if(option == "save")
-  {
+//  if(option == "save")
+//  {
     ofstream outfile;
     outfile.open(PARAM_FILE_NAME, ios::app);
-    outfile 	<< 1 << "\t"
-		<< SampleGaus(Ce139 + Ce_offset, Ce_error) << "\t"
-		<< SampleGaus(Sn113 + Sn_offset, Sn_error) << "\t"
-		<< SampleGaus(Bi207_low + Bi2_offset, Bi2_error) << "\t"
-		<< SampleGaus(Bi207_high + Bi1_offset, Bi1_error) << "\n";
 
+    int counter = 0;
+
+    for(double a = -1; a <= 1; a = a + 0.5)
+    {
+      for(double b = -0.1; b <= 0.1; b = b + 0.05)
+      {
+        for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
+        {
+          for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
+          {
+/*	    outfile 	<< counter << "\t"
+			<< a << "\t"
+			<< b << "\t"
+			<< c << "\t"
+			<< d << "\t"
+			<< a << "\t"
+			<< b << "\t"
+			<< c << "\t"
+			<< d << "\n";
+*/
+	    twiddles_East.push_back(new TF1(Form("polyE_%i", counter), "[0] + (1+[1])*x + [2]*x*x + [3]*x*x*x", 0, 800));
+	    twiddles_East.back() -> SetParameter(0, a);
+	    twiddles_East.back() -> SetParameter(1, b);
+	    twiddles_East.back() -> SetParameter(2, c);
+	    twiddles_East.back() -> SetParameter(3, d);
+
+            twiddles_West.push_back(new TF1(Form("polyW_%i", counter), "[0] + (1+[1])*x + [2]*x*x + [3]*x*x*x", 0, 800));
+            twiddles_West.back() -> SetParameter(0, a);
+            twiddles_West.back() -> SetParameter(1, b);
+            twiddles_West.back() -> SetParameter(2, c);
+            twiddles_West.back() -> SetParameter(3, d);
+
+            counter++;
+          }
+        }
+      }
+    }
     outfile.close();
-  }
-  else */if(option == "plot")
-  {
-  // plot everything and visualize
+//  }
+
+  // Load the converter to get Erecon from a single EQ value.
+  vector < vector < vector <double> > > EQ2Etrue = GetEQ2EtrueParams("2010");
+
+  // Calculate Erecon
+  int typeIndex = 0;	// Since we are doing calibration curves on East/West scintillators,
+			// it is equivalent to looking at a spectrum of type 0's.
+  int sideIndex = 0;	// testing just the Erecons due to East side calibration
+
+  TF1 *Erecon0 = new TF1("Erecon0", EreconFunction(EQ2Etrue, typeIndex, sideIndex, pure_East), 0.1, 800, 0);
+  fBase = Erecon0;
+
+  // Plot all the twiddle functions and error envelope
   TCanvas *C = new TCanvas("canvas", "canvas");
-  gROOT->SetStyle("Plain");     //on my computer this sets background to white, finally!
-
-  TF1* gausFunction = new TF1("name", "gaus(0)", 0, 850);
-  gausFunction -> SetParName(0, "norm");
-  gausFunction -> SetParName(1, "mean");
-  gausFunction -> SetParName(2, "sigma");
-  gausFunction -> SetParameter(0, 100);
-  gausFunction -> SetParameter(1, Ce139 + Ce_offset);
-  gausFunction -> SetParameter(2, Ce_error);
-
-  for(int i = 0; i < 1; i++)
+  gROOT->SetStyle("Plain");
+  for(int i = 0; i < 20; i++)
   {
-    hCe->FillRandom("name", 1000);
+    if(i == 0)
+    {
+      fTwiddle = Erecon0;
+      fDiff.push_back(new TF1(Form("diff_%i", i), DiffTwoFunctions, 0.1, 800, 0));
+    }
+    else
+    {
+      fTwiddle = new TF1(Form("Erecon_twiddle_%i", i), EreconFunction(EQ2Etrue, typeIndex, sideIndex, twiddles_East[i]), 0.1, 800, 0);
+      fDiff.push_back(new TF1(Form("diff_%i", i), DiffTwoFunctions, 0.1, 800, 0));
+    }
   }
-  PlotHist(C, 1, 1, hCe, "Ce139", "");
+  for(int i = 0; i < 20; i++)
+  {
+    if(i == 0)
+	PlotFunc(C, i, 1, fDiff[i], "");
+    else
+	PlotFunc(C, i, 1, fDiff[i], "SAME");
 
-  gausFunction->Draw("SAME");
+  }
 
-  // prints the canvas with a dynamic TString name of the name of the file
-  C -> Print(Form("%s.pdf", "test_genCoeff"));
-  cout << "-------------- End of Program ---------------" << endl;
   plot_program.Run();
 
-  }
-
-  // Create the linear polynomial. Get coefficients by fitting to 4 points we have.
-
-  // Subtract that linear polynomial from the 4th order polynomial.
-  // Plot it.
-
-
-
-
   return 0;
+}
+
+void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command)
+{
+  C -> cd(canvasIndex);
+
+  fPlot->SetLineColor(styleIndex);
+
+  fPlot->Draw(command);
+
 }
 
 void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString title, TString command)
@@ -177,15 +225,40 @@ void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString 
   C -> Update();
 }
 
-double SampleGaus(double mean, double sigma)
+//Get the conversion from EQ2Etrue
+vector < vector < vector <double> > > GetEQ2EtrueParams(string geometry)
 {
-  TF1* gausFunction = new TF1("gaussian", "gaus(0)", 0, 850);
-  gausFunction -> SetParName(0, "norm");
-  gausFunction -> SetParName(1, "mean");
-  gausFunction -> SetParName(2, "sigma");
-  gausFunction -> SetParameter(0, 1);
-  gausFunction -> SetParameter(1, mean);
-  gausFunction -> SetParameter(2, sigma);
+  ifstream infile;
+  if (geometry=="2010") infile.open(INPUT_EQ2ETRUE_PARAMS);
+//  else if (geometry=="2011/2012") infile.open("../simulation_comparison/EQ2EtrueConversion/2011-2012_EQ2EtrueFitParams.dat");
+//  else if (geometry=="2012/2013") infile.open("../simulation_comparison/EQ2EtrueConversion/2012-2013_EQ2EtrueFitParams.dat");
+  else {
+    cout << "Bad geometry passed to getEQ2EtrueParams\n";
+    exit(0);
+  }
+  vector < vector < vector < double > > > params;
+  params.resize(2,vector < vector < double > > (3, vector < double > (6,0.)));
 
-  return gausFunction->GetRandom();
+  char holdType[10];
+  int side=0, type=0;
+  while (infile >> holdType >> params[side][type][0] >> params[side][type][1] >> params[side][type][2] >> params[side][type][3] >> params[side][type][4] >> params[side][type][5])
+  {
+    std::cout << holdType << " " << params[side][type][0] << " " << params[side][type][1] << " " << params[side][type][2] << " " << params[side][type][3] << " " << params[side][type][4] << " " << params[side][type][5] << std::endl;
+    type+=1;
+    if (type==3) {type=0; side=1;}
+  }
+  return params;
+}
+
+double CalculateErecon(double totalEvis, vector < vector < vector <double> > > tempEQ2Etrue, int type, int side)
+{
+  return tempEQ2Etrue[side][type][0]
+	+tempEQ2Etrue[side][type][1]*totalEvis
+	+tempEQ2Etrue[side][type][2]/(totalEvis+tempEQ2Etrue[side][type][3])
+	+tempEQ2Etrue[side][type][4]/((totalEvis+tempEQ2Etrue[side][type][5])*(totalEvis+tempEQ2Etrue[side][type][5]));;
+}
+
+double DiffTwoFunctions(double *x, double *p)
+{
+  return fTwiddle -> EvalPar(x, p) - fBase -> EvalPar(x, p);
 }

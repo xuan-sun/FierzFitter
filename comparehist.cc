@@ -7,24 +7,24 @@ TApplication plot_program("FADC_readin",0,0,0,0);
 
 int main()
 {
-  TString treeName = Form("Evts");
+/*  TString treeName = Form("Evts");
   TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
   TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
   TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 111, 112);
   TString variableName = Form("KE");
   TString cutsUsed = Form("");
+*/
 
-/*
   // Create a TChain
   TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 10);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/20mill_FierzAndBeta/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 10);
-  TChain *dataChain = MakeTChain("Data/Sim_b_1/8mill_beta_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 1);
+  TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 100);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 100);
+  TChain *dataChain = MakeTChain("Data/Sim_b_1/40mill_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName, 10, 11);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
-  TString cutsUsed = Form("type == 0 && side != 2");
-*/
+  TString cutsUsed = Form("type != 4 && side != 2");
+
   TH1D* dataHist = ExtractHistFromChain(variableName, cutsUsed, dataChain,
 				      "myHist", "Test of comparehist code", 100, 0, 1000);
   TH1D* mcTheoryHistBeta = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainBeta,
@@ -37,8 +37,8 @@ int main()
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
   TVirtualFitter* vfit = fit->GetFitter();
-  int fitMin = 1;
-  int fitMax = 85;
+  int fitMin = 10;
+  int fitMax = 65;
   fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
 
   // Setting initial search parameters.

@@ -5,14 +5,14 @@
 
 int main()
 {
-  TString treeName = Form("Evts");
-  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
-  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_1_300mill/Evts", treeName
+  TString treeName = Form("SimAnalyzed");
+  TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 100);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 100);
+  TChain *dataChain = MakeTChain("Data/Sim_b_1/40mill_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName
 				, ReplaceWithIndexLow, ReplaceWithIndexHigh);
 
-  TString variableName = Form("KE");
-  TString cutsUsed = Form("");
+  TString variableName = Form("Erecon");
+  TString cutsUsed = Form("type != 4 && side != 2");
   TH1D* mcTheoryHistBeta = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainBeta,
                                       "mcBeta", "Beta", 100, 0, 1000);
   TH1D* mcTheoryHistFierz = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainFierz,
@@ -25,8 +25,8 @@ int main()
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "Q");  // initialise
   TVirtualFitter* vfit = fit->GetFitter();
 
-  int fitMin = 1;
-  int fitMax = 85;
+  int fitMin = 10;
+  int fitMax = 65;
   fit -> SetRangeX(fitMin, fitMax);
 
   // Setting initial search parameters.
