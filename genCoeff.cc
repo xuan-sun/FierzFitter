@@ -54,6 +54,8 @@ void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraph *gPlot, TStri
 void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command);
 vector < vector < vector <double> > > GetEQ2EtrueParams(string geometry);
 double CalculateErecon(double totalEvis, vector < vector < vector <double> > > tempEQ2Etrue, int type, int side);
+TF1* ErrorEnvelope_2010();
+
 
 TApplication plot_program("FADC_readin",0,0,0,0);
 
@@ -150,7 +152,7 @@ int main(int argc, char *argv[])
     outfile.close();
 //  }
 
-  cout << "Number of twiddle coefficients generated: " << counter << endl;
+  cout << "\nNumber of twiddle coefficients generated: " << counter << "\n" << endl;
 
   // Load the converter to get Erecon from a single EQ value.
   vector < vector < vector <double> > > EQ2Etrue = GetEQ2EtrueParams("2010");
@@ -175,12 +177,10 @@ int main(int argc, char *argv[])
   vector <double> Erecon0_values;
   vector < vector <double> > delta_Erecon_values;	// first index ranges over twiddles
 							// second index ranges over step values in Evis space
-
   double Evis_min = 1;		// both of these values are KeV.
   double Evis_max = 800;
   double Evis_step = 1;
   int nbPoints = 0;
-
   for(int i = Evis_min; i <= Evis_max; i = i + Evis_step)
   {
     Evis_axis.push_back(i);	// note: i is in whatever units Evis is in.
@@ -188,6 +188,8 @@ int main(int argc, char *argv[])
     nbPoints++;
   }
 
+  // Get our error envelope for 2010 defined by Michael Mendenhall's thesis.
+  TF1* errEnv = ErrorEnvelope_2010();
 
   // Plot all the twiddle functions and error envelope
   TCanvas *C = new TCanvas("canvas", "canvas");
@@ -212,7 +214,7 @@ int main(int argc, char *argv[])
     graphs.push_back(new TGraph(nbPoints, &(Erecon0_values[0]), &(delta_Erecon_values[i][0])));
   }
 
-  for(int i = 0; i < 25; i++)
+  for(int i = 0; i < 625; i++)
   {
     if(i == 0)
 	PlotGraph(C, i, 1, graphs[i], "AL");
@@ -246,6 +248,7 @@ void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraph *gPlot, TStri
 {
   C -> cd(canvasIndex);
   gPlot->SetLineColor(styleIndex);
+  gPlot->GetYaxis()->SetRangeUser(-40, 40);
   gPlot->Draw(command);
 }
 
@@ -313,4 +316,11 @@ double CalculateErecon(double totalEvis, vector < vector < vector <double> > > t
 	+tempEQ2Etrue[side][type][1]*totalEvis
 	+tempEQ2Etrue[side][type][2]/(totalEvis+tempEQ2Etrue[side][type][3])
 	+tempEQ2Etrue[side][type][4]/((totalEvis+tempEQ2Etrue[side][type][5])*(totalEvis+tempEQ2Etrue[side][type][5]));;
+}
+
+TF1* ErrorEnvelope_2010()
+{
+
+
+  return ;
 }
