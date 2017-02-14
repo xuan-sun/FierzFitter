@@ -195,6 +195,7 @@ int main(int argc, char *argv[])
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT->SetStyle("Plain");
 
+/*
   for(int i = 0; i < counter; i++)
   {
     delta_Erecon_East.push_back(new TF1(Form("Delta_Erecon_%i", i),
@@ -226,7 +227,7 @@ int main(int argc, char *argv[])
 
   // Save our plot and print it out as a pdf.
   C -> Print("output_genCoeff.pdf");
-
+*/
   plot_program.Run();
   cout << "-------------- End of Program ---------------" << endl;
   return 0;
@@ -320,7 +321,7 @@ double CalculateErecon(double totalEvis, vector < vector < vector <double> > > t
 
 TF1* ErrorEnvelope_2010()
 {
+  TF1* fEnv = new TF1("2010_error_envelope", "(x <= 200)*2.5 + (x > 200 && x <= 500)*(2.5 + 0.0125*(x-200)) + (x>500)*6.25", 0, 1000);
 
-
-  return ;
+  return fEnv;
 }
