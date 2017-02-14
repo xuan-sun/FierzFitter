@@ -50,16 +50,12 @@ const double m_e = 511.00;                                              ///< ele
 #define		INPUT_EQ2ETRUE_PARAMS	"/home/xuansun/Documents/ParallelAnalyzer/simulation_comparison/EQ2EtrueConversion/2011-2012_EQ2EtrueFitParams.dat"
 
 void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString title, TString command);
+void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraph *gPlot, TString command);
 void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command);
 vector < vector < vector <double> > > GetEQ2EtrueParams(string geometry);
 double CalculateErecon(double totalEvis, vector < vector < vector <double> > > tempEQ2Etrue, int type, int side);
-double DiffTwoFunctions(double *x, double *p);
 
 TApplication plot_program("FADC_readin",0,0,0,0);
-
-TF1* fBase;
-TF1* fTwiddle;
-vector <TF1*> fDiff;
 
 struct EreconFunction
 {
@@ -69,6 +65,7 @@ struct EreconFunction
   double operator() (double *x, double *p) const
   {
     return CalculateErecon(XAXIS->EvalPar(x,p), COEFFS, TYPE, SIDE);
+//    return CalculateErecon(*x, COEFFS, TYPE, SIDE);
   }
 
   vector < vector < vector <double> > > COEFFS;
@@ -77,6 +74,18 @@ struct EreconFunction
   TF1* XAXIS;
 };
 
+struct TwiddleFunctionErecon
+{
+  TwiddleFunctionErecon(TF1* base, TF1* varied): BASE(base), VARIED(varied) {}
+
+  double operator() (double *x, double *p) const
+  {
+    return VARIED -> EvalPar(x, p) - BASE -> EvalPar(x, p);
+  }
+
+  TF1* BASE;
+  TF1* VARIED;
+};
 
 int main(int argc, char *argv[])
 {
@@ -141,6 +150,8 @@ int main(int argc, char *argv[])
     outfile.close();
 //  }
 
+  cout << "Number of twiddle coefficients generated: " << counter << endl;
+
   // Load the converter to get Erecon from a single EQ value.
   vector < vector < vector <double> > > EQ2Etrue = GetEQ2EtrueParams("2010");
 
@@ -150,35 +161,72 @@ int main(int argc, char *argv[])
   int sideIndex = 0;	// testing just the Erecons due to East side calibration
 
   TF1 *Erecon0 = new TF1("Erecon0", EreconFunction(EQ2Etrue, typeIndex, sideIndex, pure_East), 0.1, 800, 0);
-  fBase = Erecon0;
+  vector <TF1*> Erecon_Twiddles_East;
+  vector <TF1*> delta_Erecon_East;
+  for(int i = 0; i < counter; i++)
+  {
+    Erecon_Twiddles_East.push_back(new TF1(Form("Erecon_twiddles_%i", i),
+					EreconFunction(EQ2Etrue, typeIndex, sideIndex, twiddles_East[i]), 0.1, 800, 0));
+  }
+
+
+  // Create arrays of Erecon0 and EreconError so we can scatter plot them (hence have error as function of Erecon0).
+  vector <double> Evis_axis;
+  vector <double> Erecon0_values;
+  vector < vector <double> > delta_Erecon_values;	// first index ranges over twiddles
+							// second index ranges over step values in Evis space
+
+  double Evis_min = 1;		// both of these values are KeV.
+  double Evis_max = 800;
+  double Evis_step = 1;
+  int nbPoints = 0;
+
+  for(int i = Evis_min; i <= Evis_max; i = i + Evis_step)
+  {
+    Evis_axis.push_back(i);	// note: i is in whatever units Evis is in.
+    Erecon0_values.push_back(Erecon0 -> Eval(i));
+    nbPoints++;
+  }
+
 
   // Plot all the twiddle functions and error envelope
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT->SetStyle("Plain");
-  for(int i = 0; i < 20; i++)
-  {
-    if(i == 0)
-    {
-      fTwiddle = Erecon0;
-      fDiff.push_back(new TF1(Form("diff_%i", i), DiffTwoFunctions, 0.1, 800, 0));
-    }
-    else
-    {
-      fTwiddle = new TF1(Form("Erecon_twiddle_%i", i), EreconFunction(EQ2Etrue, typeIndex, sideIndex, twiddles_East[i]), 0.1, 800, 0);
-      fDiff.push_back(new TF1(Form("diff_%i", i), DiffTwoFunctions, 0.1, 800, 0));
-    }
-  }
-  for(int i = 0; i < 20; i++)
-  {
-    if(i == 0)
-	PlotFunc(C, i, 1, fDiff[i], "");
-    else
-	PlotFunc(C, i, 1, fDiff[i], "SAME");
 
+  for(int i = 0; i < counter; i++)
+  {
+    delta_Erecon_East.push_back(new TF1(Form("Delta_Erecon_%i", i),
+					TwiddleFunctionErecon(Erecon0, Erecon_Twiddles_East[i]), 0.1, 800, 0));
+    vector <double> temp;
+    for(int j = Evis_min; j <= Evis_max; j = j + Evis_step)
+    {
+      temp.push_back(delta_Erecon_East[i] -> Eval(j));
+    }
+
+    delta_Erecon_values.push_back(temp);
   }
+
+  vector <TGraph*> graphs;
+  for(int i = 0; i < counter; i++)
+  {
+    graphs.push_back(new TGraph(nbPoints, &(Erecon0_values[0]), &(delta_Erecon_values[i][0])));
+  }
+
+  for(int i = 0; i < 25; i++)
+  {
+    if(i == 0)
+	PlotGraph(C, i, 1, graphs[i], "AL");
+    else
+	PlotGraph(C, i, 1, graphs[i], "SAME");
+
+//    PlotFunc(C, 4, 1, delta_Erecon_East[i], "SAME");
+  }
+
+  // Save our plot and print it out as a pdf.
+  C -> Print("output_genCoeff.pdf");
 
   plot_program.Run();
-
+  cout << "-------------- End of Program ---------------" << endl;
   return 0;
 }
 
@@ -186,10 +234,19 @@ void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString c
 {
   C -> cd(canvasIndex);
 
-  fPlot->SetLineColor(styleIndex);
+  fPlot->SetLineColor(styleIndex % 50);	// only 50 colors in set line color.
+  fPlot->GetYaxis()->SetRangeUser(-40, 40);
+  fPlot->GetYaxis()->SetTitle("Erecon error");
+  fPlot->GetXaxis()->SetTitle("Evis");
 
   fPlot->Draw(command);
+}
 
+void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraph *gPlot, TString command)
+{
+  C -> cd(canvasIndex);
+  gPlot->SetLineColor(styleIndex);
+  gPlot->Draw(command);
 }
 
 void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString title, TString command)
@@ -256,9 +313,4 @@ double CalculateErecon(double totalEvis, vector < vector < vector <double> > > t
 	+tempEQ2Etrue[side][type][1]*totalEvis
 	+tempEQ2Etrue[side][type][2]/(totalEvis+tempEQ2Etrue[side][type][3])
 	+tempEQ2Etrue[side][type][4]/((totalEvis+tempEQ2Etrue[side][type][5])*(totalEvis+tempEQ2Etrue[side][type][5]));;
-}
-
-double DiffTwoFunctions(double *x, double *p)
-{
-  return fTwiddle -> EvalPar(x, p) - fBase -> EvalPar(x, p);
 }
