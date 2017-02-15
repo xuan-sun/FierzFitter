@@ -54,7 +54,7 @@ void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraph *gPlot, TStri
 void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command);
 vector < vector < vector <double> > > GetEQ2EtrueParams(string geometry);
 double CalculateErecon(double totalEvis, vector < vector < vector <double> > > tempEQ2Etrue, int type, int side);
-TF1* ErrorEnvelope_2010();
+TF1* ErrorEnvelope_2010(double factor);
 
 
 TApplication plot_program("FADC_readin",0,0,0,0);
@@ -189,11 +189,15 @@ int main(int argc, char *argv[])
   }
 
   // Get our error envelope for 2010 defined by Michael Mendenhall's thesis.
-  TF1* errEnv = ErrorEnvelope_2010();
+  TF1* errEnv_top = ErrorEnvelope_2010(1);
+  TF1* errEnv_bot = ErrorEnvelope_2010(-1);
 
   // Plot all the twiddle functions and error envelope
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT->SetStyle("Plain");
+
+  errEnv_top->Draw();
+  errEnv_bot->Draw("SAME");
 
 /*
   for(int i = 0; i < counter; i++)
@@ -319,9 +323,9 @@ double CalculateErecon(double totalEvis, vector < vector < vector <double> > > t
 	+tempEQ2Etrue[side][type][4]/((totalEvis+tempEQ2Etrue[side][type][5])*(totalEvis+tempEQ2Etrue[side][type][5]));;
 }
 
-TF1* ErrorEnvelope_2010()
+TF1* ErrorEnvelope_2010(double factor)
 {
-  TF1* fEnv = new TF1("2010_error_envelope", "(x <= 200)*2.5 + (x > 200 && x <= 500)*(2.5 + 0.0125*(x-200)) + (x>500)*6.25", 0, 1000);
+  TF1* fEnv = new TF1("2010_error_envelope", Form("%f*((x <= 200)*2.5 + (x > 200 && x <= 500)*(2.5 + 0.0125*(x-200)) + (x>500)*6.25)", factor), 0, 1000);
 
   return fEnv;
 }
