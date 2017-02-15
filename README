@@ -15,3 +15,6 @@ This is designed to work in conjunction with a script that will execute this pro
 getvalues.C is a simple macro that will read in a TChain and print the histogram contents to a file.
 
 genCoeff.cc will generate polynomial coefficients and print to a file.
+This also does a ton of processing. The polynomial coefficients are originally thrown in Evis space
+but then converted to Erecon space. Then they are plotted and the 2010 error envelope is plotted.
+Some type of selection condition is checked and then the coefficients are saved.

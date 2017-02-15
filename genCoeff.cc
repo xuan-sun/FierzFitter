@@ -46,6 +46,8 @@ using            namespace std;
 // Fundamental constants that get used
 const double m_e = 511.00;                                              ///< electron mass, keV/c^2
 
+// Input and output names and paths used in the code.
+// My pseudo version of environment variables.
 #define		PARAM_FILE_NAME		"params_2010.txt"
 #define		INPUT_EQ2ETRUE_PARAMS	"/home/xuansun/Documents/ParallelAnalyzer/simulation_comparison/EQ2EtrueConversion/2011-2012_EQ2EtrueFitParams.dat"
 
@@ -63,8 +65,9 @@ double CalculateErecon(double totalEvis, vector < vector < vector <double> > > t
 // Michael Mendenhall's 2010 error envelope.
 TF1* ErrorEnvelope_2010(double factor);
 
-// Perform a single twiddle so we can loop over it in main(), check against a save condition
-void PerformVariation(double a, double b, double c, double d, int iteration,
+// Perform a single twiddle so we can loop over it in main(), check against a save condition.
+// Return whether or not the thrown polynomial passed the save condition.
+bool PerformVariation(double a, double b, double c, double d, int numPassed,
                       vector < vector < vector <double> > > EQ2Etrue);
 
 // Used for visualization, keeps the graph on screen.
@@ -107,20 +110,22 @@ struct TwiddleFunctionErecon
 
 int main(int argc, char *argv[])
 {
-/*  if(argc != 2)
-  {
-    cout << "Improper format. Needs: (executable) (either 'save' or 'plot)" << endl;
-    return 0;
-  }
   // Takes in initial argument and ensures the seed is different for randomizing in ROOT.
-  string option = argv[1];
-*/  gRandom->SetSeed(0);		// Makes sure that each call to GetRandom() is different
+  gRandom->SetSeed(0);		// Makes sure that each call to GetRandom() is different
 
-//  if(option == "save")
-//  {
-
+  // Start the plotting stuff so we can loop and use "SAME" as much as possible.
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT->SetStyle("Plain");
+  TF1* errEnv_top = ErrorEnvelope_2010(1);
+  TF1* errEnv_bot = ErrorEnvelope_2010(-1);
+  errEnv_top -> GetYaxis() -> SetRangeUser(-10, 10);
+  errEnv_top -> GetYaxis() -> SetTitle("E_{recon} Error (keV)");
+  errEnv_top -> GetXaxis() -> SetTitle("E_{recon} (keV)");
+  errEnv_top -> SetTitle("Non-linearity Polynomial Variations");
+  errEnv_top -> SetLineStyle(2);
+  errEnv_top -> Draw();
+  errEnv_bot -> SetLineStyle(2);
+  errEnv_bot -> Draw("SAME");
 
   // Load the converter to get Erecon from a single EQ value.
   cout << "Using following calibration for 2010 geometry to convert Evis to Erecon..." << endl;
@@ -128,17 +133,27 @@ int main(int argc, char *argv[])
 
   ofstream outfile;
   outfile.open(PARAM_FILE_NAME, ios::app);
-
   int counter = 0;
-  for(double a = -1; a <= 1; a = a + 0.5)
+  int numberSaved = 0;
+  for(double a = -3; a <= 3; a = a + 0.1)
   {
-    for(double b = -0.1; b <= 0.1; b = b + 0.05)
+    for(double b = -0.1; b <= 0.1; b = b + 0.001)
     {
       for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
       {
         for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
         {
-          PerformVariation(a, b, c, d, counter, converter);
+          bool save = PerformVariation(a, b, c, d, numberSaved+1, converter);
+	  if(save == true)
+	  {
+	    // Print the coefficients for both East and West to file.
+	    numberSaved++;
+	  }
+          if(counter % 1000 == 0)
+          {
+	    cout << "On polynomial " << counter << endl;
+	  }
+
           counter++;
         }
       }
@@ -146,15 +161,8 @@ int main(int argc, char *argv[])
   }
   outfile.close();
 
-  cout << "\nNumber of twiddle coefficients generated: " << counter << "\n" << endl;
-
-  // Get our error envelope for 2010 defined by Michael Mendenhall's thesis.
-  TF1* errEnv_top = ErrorEnvelope_2010(1);
-  TF1* errEnv_bot = ErrorEnvelope_2010(-1);
-
-  errEnv_top -> Draw("SAME");
-  errEnv_bot -> Draw("SAME");
-
+  cout << "\nNumber of twiddle coefficients thrown: " << counter << endl;
+  cout << "Number of twiddle coefficients saved: "<< numberSaved << "\n" << endl;
 
   // Save our plot and print it out as a pdf.
   C -> Print("output_genCoeff.pdf");
@@ -164,10 +172,10 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-void PerformVariation(double a, double b, double c, double d, int iteration,
+bool PerformVariation(double a, double b, double c, double d, int numPassed,
 		      vector < vector < vector <double> > > EQ2Etrue)
 {
-  bool saveCondition = false;
+  bool saveCondition = true;
 
   double xMin = 0.1;	// For all polynomial ranges, in Evis units.
   double xMax = 900;
@@ -206,21 +214,32 @@ void PerformVariation(double a, double b, double c, double d, int iteration,
     nbPoints++;
   }
 
- // Create our scatter plot as a TGraph. Then set visualization parameters and plot.
+  // Create our scatter plot as a TGraph.
   TGraph* graph = new TGraph(nbPoints, &(Erecon0_values[0]), &(delta_Erecon_values[0]));
-  graph->SetLineColor(iteration % 50);
-  graph->GetYaxis()->SetRangeUser(-40, 40);
-  if(iteration == 0)
+
+  // Get our error envelope so we can check polynomial values against it.
+  TF1* errEnv_top = ErrorEnvelope_2010(1);
+
+  // Check our polynomial (the scatter plot) against a save condition.
+  double x, y;
+  for(int i = 1; i <= graph->GetN(); i++)
   {
-    graph->Draw("AL");
+    graph->GetPoint(i, x, y);
+    if(abs(y) > errEnv_top->Eval(x))
+    {
+      saveCondition = false;
+      break;
+    }
   }
-  else
+
+  if(saveCondition == true)
   {
+    // Plotting stuff
+    graph->SetLineColor(numPassed % 50);
     graph->Draw("SAME");
   }
 
-
-//  return saveCondition;
+  return saveCondition;
 }
 
 void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command)
