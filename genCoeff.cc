@@ -49,16 +49,28 @@ const double m_e = 511.00;                                              ///< ele
 #define		PARAM_FILE_NAME		"params_2010.txt"
 #define		INPUT_EQ2ETRUE_PARAMS	"/home/xuansun/Documents/ParallelAnalyzer/simulation_comparison/EQ2EtrueConversion/2011-2012_EQ2EtrueFitParams.dat"
 
+// Plotting functions.
 void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString title, TString command);
 void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraph *gPlot, TString command);
 void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command);
+
+// Michael Brown's SimulationProcessor.cpp uses this to convert to Erecon
 vector < vector < vector <double> > > GetEQ2EtrueParams(string geometry);
+
+// Does the Erecon calculation using calibration information.
 double CalculateErecon(double totalEvis, vector < vector < vector <double> > > tempEQ2Etrue, int type, int side);
+
+// Michael Mendenhall's 2010 error envelope.
 TF1* ErrorEnvelope_2010(double factor);
 
+// Perform a single twiddle so we can loop over it in main(), check against a save condition
+void PerformVariation(double a, double b, double c, double d, int iteration,
+                      vector < vector < vector <double> > > EQ2Etrue);
 
+// Used for visualization, keeps the graph on screen.
 TApplication plot_program("FADC_readin",0,0,0,0);
 
+// Takes an Evis function and converts it to an Erecon function.
 struct EreconFunction
 {
   EreconFunction(vector < vector < vector <double> > > calibrationCoeffs, int type, int side, TF1 *f_var):
@@ -67,7 +79,6 @@ struct EreconFunction
   double operator() (double *x, double *p) const
   {
     return CalculateErecon(XAXIS->EvalPar(x,p), COEFFS, TYPE, SIDE);
-//    return CalculateErecon(*x, COEFFS, TYPE, SIDE);
   }
 
   vector < vector < vector <double> > > COEFFS;
@@ -76,6 +87,7 @@ struct EreconFunction
   TF1* XAXIS;
 };
 
+// Creates a twiddle function in Erecon space. Mostly this just does a subtraction.
 struct TwiddleFunctionErecon
 {
   TwiddleFunctionErecon(TF1* base, TF1* varied): BASE(base), VARIED(varied) {}
@@ -89,6 +101,10 @@ struct TwiddleFunctionErecon
   TF1* VARIED;
 };
 
+// ----------------------------------------------------------------- //
+// -------------------- Start of program code. --------------------- //
+// ----------------------------------------------------------------- //
+
 int main(int argc, char *argv[])
 {
 /*  if(argc != 2)
@@ -100,141 +116,111 @@ int main(int argc, char *argv[])
   string option = argv[1];
 */  gRandom->SetSeed(0);		// Makes sure that each call to GetRandom() is different
 
-  // Generate twiddle polynomials in EQ space.
-  vector <TF1*> twiddles_East;
-  vector <TF1*> twiddles_West;
-
-  TF1* pure_East = new TF1("pureE", "x", 0, 800);
-  TF1* pure_West = new TF1("pureW", "x", 0, 800);
-
 //  if(option == "save")
 //  {
-    ofstream outfile;
-    outfile.open(PARAM_FILE_NAME, ios::app);
 
-    int counter = 0;
+  TCanvas *C = new TCanvas("canvas", "canvas");
+  gROOT->SetStyle("Plain");
 
-    for(double a = -1; a <= 1; a = a + 0.5)
+  // Load the converter to get Erecon from a single EQ value.
+  cout << "Using following calibration for 2010 geometry to convert Evis to Erecon..." << endl;
+  vector < vector < vector <double> > > converter = GetEQ2EtrueParams("2010");
+
+  ofstream outfile;
+  outfile.open(PARAM_FILE_NAME, ios::app);
+
+  int counter = 0;
+  for(double a = -1; a <= 1; a = a + 0.5)
+  {
+    for(double b = -0.1; b <= 0.1; b = b + 0.05)
     {
-      for(double b = -0.1; b <= 0.1; b = b + 0.05)
+      for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
       {
-        for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
+        for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
         {
-          for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
-          {
-/*	    outfile 	<< counter << "\t"
-			<< a << "\t"
-			<< b << "\t"
-			<< c << "\t"
-			<< d << "\t"
-			<< a << "\t"
-			<< b << "\t"
-			<< c << "\t"
-			<< d << "\n";
-*/
-	    twiddles_East.push_back(new TF1(Form("polyE_%i", counter), "[0] + (1+[1])*x + [2]*x*x + [3]*x*x*x", 0, 800));
-	    twiddles_East.back() -> SetParameter(0, a);
-	    twiddles_East.back() -> SetParameter(1, b);
-	    twiddles_East.back() -> SetParameter(2, c);
-	    twiddles_East.back() -> SetParameter(3, d);
-
-            twiddles_West.push_back(new TF1(Form("polyW_%i", counter), "[0] + (1+[1])*x + [2]*x*x + [3]*x*x*x", 0, 800));
-            twiddles_West.back() -> SetParameter(0, a);
-            twiddles_West.back() -> SetParameter(1, b);
-            twiddles_West.back() -> SetParameter(2, c);
-            twiddles_West.back() -> SetParameter(3, d);
-
-            counter++;
-          }
+          PerformVariation(a, b, c, d, counter, converter);
+          counter++;
         }
       }
     }
-    outfile.close();
-//  }
+  }
+  outfile.close();
 
   cout << "\nNumber of twiddle coefficients generated: " << counter << "\n" << endl;
-
-  // Load the converter to get Erecon from a single EQ value.
-  vector < vector < vector <double> > > EQ2Etrue = GetEQ2EtrueParams("2010");
-
-  // Calculate Erecon
-  int typeIndex = 0;	// Since we are doing calibration curves on East/West scintillators,
-			// it is equivalent to looking at a spectrum of type 0's.
-  int sideIndex = 0;	// testing just the Erecons due to East side calibration
-
-  TF1 *Erecon0 = new TF1("Erecon0", EreconFunction(EQ2Etrue, typeIndex, sideIndex, pure_East), 0.1, 800, 0);
-  vector <TF1*> Erecon_Twiddles_East;
-  vector <TF1*> delta_Erecon_East;
-  for(int i = 0; i < counter; i++)
-  {
-    Erecon_Twiddles_East.push_back(new TF1(Form("Erecon_twiddles_%i", i),
-					EreconFunction(EQ2Etrue, typeIndex, sideIndex, twiddles_East[i]), 0.1, 800, 0));
-  }
-
-
-  // Create arrays of Erecon0 and EreconError so we can scatter plot them (hence have error as function of Erecon0).
-  vector <double> Evis_axis;
-  vector <double> Erecon0_values;
-  vector < vector <double> > delta_Erecon_values;	// first index ranges over twiddles
-							// second index ranges over step values in Evis space
-  double Evis_min = 1;		// both of these values are KeV.
-  double Evis_max = 800;
-  double Evis_step = 1;
-  int nbPoints = 0;
-  for(int i = Evis_min; i <= Evis_max; i = i + Evis_step)
-  {
-    Evis_axis.push_back(i);	// note: i is in whatever units Evis is in.
-    Erecon0_values.push_back(Erecon0 -> Eval(i));
-    nbPoints++;
-  }
 
   // Get our error envelope for 2010 defined by Michael Mendenhall's thesis.
   TF1* errEnv_top = ErrorEnvelope_2010(1);
   TF1* errEnv_bot = ErrorEnvelope_2010(-1);
 
-  // Plot all the twiddle functions and error envelope
-  TCanvas *C = new TCanvas("canvas", "canvas");
-  gROOT->SetStyle("Plain");
+  errEnv_top -> Draw("SAME");
+  errEnv_bot -> Draw("SAME");
 
-  errEnv_top->Draw();
-  errEnv_bot->Draw("SAME");
-
-/*
-  for(int i = 0; i < counter; i++)
-  {
-    delta_Erecon_East.push_back(new TF1(Form("Delta_Erecon_%i", i),
-					TwiddleFunctionErecon(Erecon0, Erecon_Twiddles_East[i]), 0.1, 800, 0));
-    vector <double> temp;
-    for(int j = Evis_min; j <= Evis_max; j = j + Evis_step)
-    {
-      temp.push_back(delta_Erecon_East[i] -> Eval(j));
-    }
-
-    delta_Erecon_values.push_back(temp);
-  }
-
-  vector <TGraph*> graphs;
-  for(int i = 0; i < counter; i++)
-  {
-    graphs.push_back(new TGraph(nbPoints, &(Erecon0_values[0]), &(delta_Erecon_values[i][0])));
-  }
-
-  for(int i = 0; i < 625; i++)
-  {
-    if(i == 0)
-	PlotGraph(C, i, 1, graphs[i], "AL");
-    else
-	PlotGraph(C, i, 1, graphs[i], "SAME");
-
-//    PlotFunc(C, 4, 1, delta_Erecon_East[i], "SAME");
-  }
 
   // Save our plot and print it out as a pdf.
   C -> Print("output_genCoeff.pdf");
-*/
-  plot_program.Run();
   cout << "-------------- End of Program ---------------" << endl;
+  plot_program.Run();
+
   return 0;
+}
+
+void PerformVariation(double a, double b, double c, double d, int iteration,
+		      vector < vector < vector <double> > > EQ2Etrue)
+{
+  bool saveCondition = false;
+
+  double xMin = 0.1;	// For all polynomial ranges, in Evis units.
+  double xMax = 900;
+
+  // Generate twiddle polynomials in EQ space (equivalently, Evis space).
+  TF1* pure_Evis = new TF1("pureE", "x", xMin, xMax);
+  TF1* twiddle_Evis = new TF1("polyE", "[0] + (1+[1])*x + [2]*x*x + [3]*x*x*x", xMin, xMax);
+  twiddle_Evis -> SetParameter(0, a);
+  twiddle_Evis -> SetParameter(1, b);
+  twiddle_Evis -> SetParameter(2, c);
+  twiddle_Evis -> SetParameter(3, d);
+
+  // Calculate Erecon
+  int typeIndex = 0;    // Since we are doing calibration curves on East/West scintillators,
+                        // it is equivalent to looking at a spectrum of type 0's.
+  int sideIndex = 0;    // testing just the Erecons due to East side calibration
+
+  // Create our twiddled and untwiddled functions in Erecon space.
+  TF1 *Erecon0_East = new TF1("Erecon0", EreconFunction(EQ2Etrue, typeIndex, sideIndex, pure_Evis), xMin, xMax, 0);
+  TF1* Erecon_Twiddle_East = new TF1("Erecon_twiddle", EreconFunction(EQ2Etrue, typeIndex, sideIndex, twiddle_Evis), xMin, xMax, 0);
+  TF1* delta_Erecon_East = new TF1("Delta_Erecon", TwiddleFunctionErecon(Erecon0_East, Erecon_Twiddle_East), xMin, xMax, 0);
+
+  // Create arrays of Erecon0 and EreconError so we can scatter plot them (hence have error as function of Erecon0).
+  vector <double> Evis_axis;
+  vector <double> Erecon0_values;
+  vector <double> delta_Erecon_values;
+  double Evis_min = 1;
+  double Evis_max = xMax;
+  double Evis_step = 1;
+  int nbPoints = 0;
+  for(int i = Evis_min; i <= Evis_max; i = i + Evis_step)
+  {
+    Evis_axis.push_back(i);     // note: i is in whatever units Evis is in.
+    Erecon0_values.push_back(Erecon0_East -> Eval(i));
+    delta_Erecon_values.push_back(delta_Erecon_East -> Eval(i));
+    nbPoints++;
+  }
+
+ // Create our scatter plot as a TGraph. Then set visualization parameters and plot.
+  TGraph* graph = new TGraph(nbPoints, &(Erecon0_values[0]), &(delta_Erecon_values[0]));
+  graph->SetLineColor(iteration % 50);
+  graph->GetYaxis()->SetRangeUser(-40, 40);
+  if(iteration == 0)
+  {
+    graph->Draw("AL");
+  }
+  else
+  {
+    graph->Draw("SAME");
+  }
+
+
+//  return saveCondition;
 }
 
 void PlotFunc(TCanvas *C, int styleIndex, int canvasIndex, TF1 *fPlot, TString command)
