@@ -73,6 +73,12 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
 // Used for visualization, keeps the graph on screen.
 TApplication plot_program("FADC_readin",0,0,0,0);
 
+// Testing histogram for plotting stuff of interest.
+TH1D *hist362;
+TH1D *hist132;
+TH1D *hist502;
+TH1D *hist995;
+
 // Takes an Evis function and converts it to an Erecon function.
 struct EreconFunction
 {
@@ -115,6 +121,8 @@ int main(int argc, char *argv[])
 
   // Start the plotting stuff so we can loop and use "SAME" as much as possible.
   TCanvas *C = new TCanvas("canvas", "canvas");
+  C -> Divide(2, 2);
+  C -> cd(1);
   gROOT->SetStyle("Plain");
   TF1* errEnv_top = ErrorEnvelope_2010(1);
   TF1* errEnv_bot = ErrorEnvelope_2010(-1);
@@ -127,6 +135,11 @@ int main(int argc, char *argv[])
   errEnv_bot -> SetLineStyle(2);
   errEnv_bot -> Draw("SAME");
 
+  hist132 = new TH1D("test1", "Fixed Erecon = 132", 100, -10, 10);
+  hist362 = new TH1D("test2", "Fixed Erecon = 362", 100, -10, 10);
+  hist502 = new TH1D("test3", "Fixed Erecon = 502", 100, -10, 10);
+  hist995 = new TH1D("test4", "Fixed Erecon = 995", 100, -10, 10);
+
   // Load the converter to get Erecon from a single EQ value.
   cout << "Using following calibration for 2010 geometry to convert Evis to Erecon..." << endl;
   vector < vector < vector <double> > > converter = GetEQ2EtrueParams("2010");
@@ -135,9 +148,9 @@ int main(int argc, char *argv[])
   outfile.open(PARAM_FILE_NAME, ios::app);
   int counter = 0;
   int numberSaved = 0;
-  for(double a = -3; a <= 3; a = a + 0.1)
+  for(double a = -3; a <= 3; a = a + 0.2)
   {
-    for(double b = -0.1; b <= 0.1; b = b + 0.001)
+    for(double b = -0.1; b <= 0.1; b = b + 0.002)
     {
       for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
       {
@@ -163,6 +176,13 @@ int main(int argc, char *argv[])
 
   cout << "\nNumber of twiddle coefficients thrown: " << counter << endl;
   cout << "Number of twiddle coefficients saved: "<< numberSaved << "\n" << endl;
+
+  C -> cd(2);
+  hist132 -> Draw();
+  C -> cd(3);
+  hist362 -> Draw();
+  C -> cd(4);
+  hist502 -> Draw();
 
   // Save our plot and print it out as a pdf.
   C -> Print("output_genCoeff.pdf");
@@ -222,9 +242,30 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
 
   // Check our polynomial (the scatter plot) against a save condition.
   double x, y;
+  double v1 = -10;
+  double v2 = -10;
+  double v3 = -10;
+  double v4 = -10;
   for(int i = 1; i <= graph->GetN(); i++)
   {
     graph->GetPoint(i, x, y);
+    if(x > 361 && x < 362)
+    {
+      v2 = y;
+    }
+    else if(x > 131 && x < 132)
+    {
+      v1 = y;
+    }
+    else if(x > 502 && x < 503)
+    {
+      v3 = y;
+    }
+    else if(x > 994 && x < 995.5)
+    {
+      v4 = y;
+    }
+
     if(abs(y) > errEnv_top->Eval(x))
     {
       saveCondition = false;
@@ -234,9 +275,23 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
 
   if(saveCondition == true)
   {
+    hist132 -> Fill(v1);
+    hist362 -> Fill(v2);
+    hist502 -> Fill(v3);
+    hist995 -> Fill(v4);
     // Plotting stuff
     graph->SetLineColor(numPassed % 50);
     graph->Draw("SAME");
+  }
+  else if(saveCondition == false)
+  {
+    delete pure_Evis;
+    delete twiddle_Evis;
+    delete Erecon0_East;
+    delete Erecon_Twiddle_East;
+    delete delta_Erecon_East;
+    delete graph;
+    delete errEnv_top;
   }
 
   return saveCondition;
