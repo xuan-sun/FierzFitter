@@ -68,16 +68,13 @@ TF1* ErrorEnvelope_2010(double factor);
 // Perform a single twiddle so we can loop over it in main(), check against a save condition.
 // Return whether or not the thrown polynomial passed the save condition.
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
-                      vector < vector < vector <double> > > EQ2Etrue);
+                      vector < vector < vector <double> > > EQ2Etrue, TRandom3 *factor);
 
 // Used for visualization, keeps the graph on screen.
 TApplication plot_program("FADC_readin",0,0,0,0);
 
 // Testing histogram for plotting stuff of interest.
-TH1D *hist362;
-TH1D *hist132;
-TH1D *hist502;
-TH1D *hist995;
+vector <TH1D*> histErecon;
 
 // Takes an Evis function and converts it to an Erecon function.
 struct EreconFunction
@@ -116,29 +113,31 @@ struct TwiddleFunctionErecon
 
 int main(int argc, char *argv[])
 {
-  // Takes in initial argument and ensures the seed is different for randomizing in ROOT.
-  gRandom->SetSeed(0);		// Makes sure that each call to GetRandom() is different
+  // Ensures the seed is different for randomizing in ROOT.
+  TRandom3* engine = new TRandom3(0);
+  gRandom->SetSeed(0);
 
   // Start the plotting stuff so we can loop and use "SAME" as much as possible.
   TCanvas *C = new TCanvas("canvas", "canvas");
   C -> Divide(2, 2);
   C -> cd(1);
   gROOT->SetStyle("Plain");
-  TF1* errEnv_top = ErrorEnvelope_2010(1);
-  TF1* errEnv_bot = ErrorEnvelope_2010(-1);
-  errEnv_top -> GetYaxis() -> SetRangeUser(-10, 10);
-  errEnv_top -> GetYaxis() -> SetTitle("E_{recon} Error (keV)");
-  errEnv_top -> GetXaxis() -> SetTitle("E_{recon} (keV)");
-  errEnv_top -> SetTitle("Non-linearity Polynomial Variations");
-  errEnv_top -> SetLineStyle(2);
-  errEnv_top -> Draw();
-  errEnv_bot -> SetLineStyle(2);
-  errEnv_bot -> Draw("SAME");
+  TF1* errEnv_top_1sigma = ErrorEnvelope_2010(1);
+  TF1* errEnv_top_2sigma = ErrorEnvelope_2010(2);
+  TF1* errEnv_bot_1sigma = ErrorEnvelope_2010(-1);
+  TF1* errEnv_bot_2sigma = ErrorEnvelope_2010(-2);
+  errEnv_top_2sigma -> GetYaxis() -> SetRangeUser(-15, 15);
+  errEnv_top_2sigma -> GetYaxis() -> SetTitle("E_{recon} Error (keV)");
+  errEnv_top_2sigma -> GetXaxis() -> SetTitle("E_{recon} (keV)");
+  errEnv_top_2sigma -> SetTitle("Non-linearity Polynomial Variations");
+  errEnv_top_2sigma -> SetLineStyle(2);
+  errEnv_top_2sigma -> Draw();
 
-  hist132 = new TH1D("test1", "Fixed Erecon = 132", 100, -10, 10);
-  hist362 = new TH1D("test2", "Fixed Erecon = 362", 100, -10, 10);
-  hist502 = new TH1D("test3", "Fixed Erecon = 502", 100, -10, 10);
-  hist995 = new TH1D("test4", "Fixed Erecon = 995", 100, -10, 10);
+  // Create histograms at fixed Erecon values to look at distribution of polynomials.
+  histErecon.push_back(new TH1D("test1", "Fixed Erecon = 132", 100, -15, 15));
+  histErecon.push_back(new TH1D("test2", "Fixed Erecon = 362", 100, -15, 15));
+  histErecon.push_back(new TH1D("test3", "Fixed Erecon = 502", 100, -15, 15));
+  histErecon.push_back(new TH1D("test4", "Fixed Erecon = 995", 100, -15, 15));
 
   // Load the converter to get Erecon from a single EQ value.
   cout << "Using following calibration for 2010 geometry to convert Evis to Erecon..." << endl;
@@ -148,23 +147,24 @@ int main(int argc, char *argv[])
   outfile.open(PARAM_FILE_NAME, ios::app);
   int counter = 0;
   int numberSaved = 0;
-  for(double a = -3; a <= 3; a = a + 0.2)
+  for(double a = -5; a <= 5; a = a + 0.2)
   {
-    for(double b = -0.1; b <= 0.1; b = b + 0.002)
+    for(double b = -0.2; b <= 0.2; b = b + 0.01)
     {
       for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
       {
         for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
         {
-          bool save = PerformVariation(a, b, c, d, numberSaved+1, converter);
+          bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine);
+
+	  // A couple of counters and print-out statements to follow along
 	  if(save == true)
 	  {
-	    // Print the coefficients for both East and West to file.
 	    numberSaved++;
 	  }
           if(counter % 1000 == 0)
           {
-	    cout << "On polynomial " << counter << endl;
+	    cout << "Checking thrown polynomial number... " << counter << endl;
 	  }
 
           counter++;
@@ -177,12 +177,22 @@ int main(int argc, char *argv[])
   cout << "\nNumber of twiddle coefficients thrown: " << counter << endl;
   cout << "Number of twiddle coefficients saved: "<< numberSaved << "\n" << endl;
 
-  C -> cd(2);
-  hist132 -> Draw();
-  C -> cd(3);
-  hist362 -> Draw();
-  C -> cd(4);
-  hist502 -> Draw();
+  // Placed here so 1 sigma error envelope goes on top.
+  errEnv_top_1sigma -> SetLineStyle(2);
+  errEnv_top_1sigma -> Draw("SAME");
+  errEnv_bot_1sigma -> SetLineStyle(2);
+  errEnv_bot_1sigma -> Draw("SAME");
+  errEnv_bot_2sigma -> SetLineStyle(2);
+  errEnv_bot_2sigma -> Draw("SAME");
+  TLine *line = new TLine(0, 0, 1000, 0);
+  line->Draw("SAME");
+
+  // Plot all the additional Erecon slice histograms
+  for(unsigned int i = 0; i < histErecon.size() - 1; i++)
+  {
+    C->cd(i+2);
+    histErecon[i]->Draw();
+  }
 
   // Save our plot and print it out as a pdf.
   C -> Print("output_genCoeff.pdf");
@@ -193,9 +203,10 @@ int main(int argc, char *argv[])
 }
 
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
-		      vector < vector < vector <double> > > EQ2Etrue)
+		      vector < vector < vector <double> > > EQ2Etrue, TRandom3* factor)
 {
   bool saveCondition = true;
+  bool throwCondition = false;
 
   double xMin = 0.1;	// For all polynomial ranges, in Evis units.
   double xMax = 900;
@@ -237,11 +248,13 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
   // Create our scatter plot as a TGraph.
   TGraph* graph = new TGraph(nbPoints, &(Erecon0_values[0]), &(delta_Erecon_values[0]));
 
-  // Get our error envelope so we can check polynomial values against it.
-  TF1* errEnv_top = ErrorEnvelope_2010(1);
+  // Get our error envelopes so we can check polynomial values against them.
+  TF1* errEnv1 = ErrorEnvelope_2010(1);
+  TF1* errEnv2 = ErrorEnvelope_2010(2);
 
   // Check our polynomial (the scatter plot) against a save condition.
   double x, y;
+  // These are to save values for histogram plots later.
   double v1 = -10;
   double v2 = -10;
   double v3 = -10;
@@ -249,6 +262,8 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
   for(int i = 1; i <= graph->GetN(); i++)
   {
     graph->GetPoint(i, x, y);
+
+    // This is to plot a Erecon slice histogram
     if(x > 361 && x < 362)
     {
       v2 = y;
@@ -261,39 +276,56 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
     {
       v3 = y;
     }
-    else if(x > 994 && x < 995.5)
+    else if(x > 994 && x < 995)
     {
       v4 = y;
     }
 
-    if(abs(y) > errEnv_top->Eval(x))
+    // if, at any point, we are over 2 sigma away, exit and don't save and don't throw a number.
+    if(abs(y) > errEnv2->Eval(x))
     {
       saveCondition = false;
+      throwCondition = false;
       break;
+    }
+    // if we are ever between 1 and 2 sigma and never outside 2 sigma, set flag to throw number to true
+    else if(abs(y) > errEnv1->Eval(x) && abs(y) < errEnv2->Eval(x))
+    {
+      throwCondition = true;
+    }
+  }
+
+  // if our condition is tripped, means our curve lies (not exclusively from below) between 1 and 2 sigma
+  if(throwCondition == true)
+  {
+    if(factor->Rndm() < 0.3)
+    {
+      saveCondition = true;
     }
   }
 
   if(saveCondition == true)
   {
-    hist132 -> Fill(v1);
-    hist362 -> Fill(v2);
-    hist502 -> Fill(v3);
-    hist995 -> Fill(v4);
+    histErecon[0] -> Fill(v1);
+    histErecon[1] -> Fill(v2);
+    histErecon[2] -> Fill(v3);
+    histErecon[3] -> Fill(v4);
     // Plotting stuff
     graph->SetLineColor(numPassed % 50);
     graph->Draw("SAME");
   }
+  // memory management. Delete the left-over pointers. Absolutely necessary or program doesn't run.
   else if(saveCondition == false)
   {
-    delete pure_Evis;
-    delete twiddle_Evis;
-    delete Erecon0_East;
-    delete Erecon_Twiddle_East;
-    delete delta_Erecon_East;
     delete graph;
-    delete errEnv_top;
   }
-
+  delete pure_Evis;
+  delete twiddle_Evis;
+  delete Erecon0_East;
+  delete Erecon_Twiddle_East;
+  delete delta_Erecon_East;
+  delete errEnv2;
+  delete errEnv1;
   return saveCondition;
 }
 
