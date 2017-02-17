@@ -298,9 +298,10 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
   // if our condition is tripped, means our curve lies (not exclusively from below) between 1 and 2 sigma
   if(throwCondition == true)
   {
+	saveCondition = false;
     if(factor->Rndm() < 0.3)
     {
-      saveCondition = true;
+//      saveCondition = true;
     }
   }
 
