@@ -69,7 +69,7 @@ TF1* ErrorEnvelope_2010(double factor);
 // Return whether or not the thrown polynomial passed the save condition.
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
                       vector < vector < vector <double> > > EQ2Etrue, TRandom3 *factor,
-		      int passNumber);
+		      int passNumber, bool forcePlot);
 
 // Used for visualization, keeps the graph on screen.
 TApplication plot_program("FADC_readin",0,0,0,0);
@@ -80,6 +80,9 @@ vector <TH1D*> histErecon;
 // Counters to allow us to properly sample beyond 1 sigma distribution.
 int num1sigma = 0;
 int num2sigma = 0;
+
+// coefficients we are saving on first pass. Speeds up program
+vector < vector <double> > goodTwiddles;
 
 // Takes an Evis function and converts it to an Erecon function.
 struct EreconFunction
@@ -153,39 +156,61 @@ int main(int argc, char *argv[])
   cout << "Using following calibration for 2010 geometry to convert Evis to Erecon..." << endl;
   vector < vector < vector <double> > > converter = GetEQ2EtrueParams("2010");
 
-  ofstream outfile;
-  outfile.open(PARAM_FILE_NAME, ios::app);
   int counter, numberSaved;
-  // Outside loop is pass number. This is to randomly sample the correct number of polynomials for each band
-  for(int i = 1; i <= 2; i++)
+  counter = 0;
+  numberSaved = 0;
+  for(double a = -5; a <= 5; a = a + 0.2)
   {
-    counter = 0;
-    numberSaved = 0;
-    for(double a = -5; a <= 5; a = a + 0.2)
+    for(double b = -0.2; b <= 0.2; b = b + 0.002)
     {
-      for(double b = -0.2; b <= 0.2; b = b + 0.002)
+      for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
       {
-        for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
+        for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
         {
-          for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
-          {
-            bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine, i);
+          bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine, 1, false);
 
-	    // A couple of counters and print-out statements to follow along
-	    if(save == true)
-	    {
-	      numberSaved++;
-	    }
-            if(counter % 10000 == 0)
-            {
-	      cout << "Pass number " << i << ". Checking thrown polynomial number... " << counter << endl;
-	    }
-            counter++;
-          }
+          // A couple of counters and print-out statements to follow along
+	  if(save == true)
+	  {
+	    numberSaved++;
+	  }
+          if(counter % 10000 == 0)
+          {
+     	    cout << "First pass on coefficients. Checking thrown polynomial number... " << counter << endl;
+	  }
+          counter++;
         }
       }
     }
   }
+
+  ofstream outfile;
+  outfile.open(PARAM_FILE_NAME, ios::app);
+  numberSaved = 0;
+  for(unsigned int i = 0; i < goodTwiddles.size(); i++)
+  {
+    bool save2 = PerformVariation(goodTwiddles[i][0], goodTwiddles[i][1], goodTwiddles[i][2], goodTwiddles[i][3],
+				  numberSaved, converter, engine, 2, true);
+    if(save2 == true)
+    {
+      outfile 	<< i << "\t"
+		<< goodTwiddles[i][0] << "\t"
+		<< goodTwiddles[i][1] << "\t"
+		<< goodTwiddles[i][2] << "\t"
+		<< goodTwiddles[i][3] << "\t"
+		<< goodTwiddles[i][0] << "\t"
+		<< goodTwiddles[i][1] << "\t"
+		<< goodTwiddles[i][2] << "\t"
+		<< goodTwiddles[i][3] << "\n";
+
+      numberSaved++;
+    }
+    if(i % 1000 == 0)
+    {
+      cout << "Processing stored polynomials... Progress: " << i << "/" << goodTwiddles.size() << endl;
+    }
+  }
+
   outfile.close();
 
   cout << "\nNumber of twiddle coefficients thrown: " << counter << endl;
@@ -221,7 +246,7 @@ int main(int argc, char *argv[])
 
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
 		      vector < vector < vector <double> > > EQ2Etrue, TRandom3* factor,
-		      int passNumber)
+		      int passNumber, bool forcePlot)
 {
   // booleans needed for first pass to count successes
   bool firstBand = true;
@@ -373,6 +398,16 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
     {
       num2sigma++;
     }
+    if(firstBand == true || secondBand == true)
+    {
+      vector <double> temp;
+      temp.push_back(a);
+      temp.push_back(b);
+      temp.push_back(c);
+      temp.push_back(d);
+      goodTwiddles.push_back(temp);
+    }
+
   }
   else if(passNumber == 2)
   {
@@ -496,7 +531,9 @@ vector < vector < vector <double> > > GetEQ2EtrueParams(string geometry)
   int side=0, type=0;
   while (infile >> holdType >> params[side][type][0] >> params[side][type][1] >> params[side][type][2] >> params[side][type][3] >> params[side][type][4] >> params[side][type][5])
   {
-    std::cout << holdType << " " << params[side][type][0] << " " << params[side][type][1] << " " << params[side][type][2] << " " << params[side][type][3] << " " << params[side][type][4] << " " << params[side][type][5] << std::endl;
+    std::cout << holdType << " " << params[side][type][0] << " " << params[side][type][1]
+	      << " " << params[side][type][2] << " " << params[side][type][3]
+	      << " " << params[side][type][4] << " " << params[side][type][5] << std::endl;
     type+=1;
     if (type==3) {type=0; side=1;}
   }
