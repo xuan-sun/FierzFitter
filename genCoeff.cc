@@ -68,13 +68,18 @@ TF1* ErrorEnvelope_2010(double factor);
 // Perform a single twiddle so we can loop over it in main(), check against a save condition.
 // Return whether or not the thrown polynomial passed the save condition.
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
-                      vector < vector < vector <double> > > EQ2Etrue, TRandom3 *factor);
+                      vector < vector < vector <double> > > EQ2Etrue, TRandom3 *factor,
+		      int passNumber);
 
 // Used for visualization, keeps the graph on screen.
 TApplication plot_program("FADC_readin",0,0,0,0);
 
 // Testing histogram for plotting stuff of interest.
 vector <TH1D*> histErecon;
+
+// Counters to allow us to properly sample beyond 1 sigma distribution.
+int num1sigma = 0;
+int num2sigma = 0;
 
 // Takes an Evis function and converts it to an Erecon function.
 struct EreconFunction
@@ -119,7 +124,7 @@ int main(int argc, char *argv[])
 
   // Start the plotting stuff so we can loop and use "SAME" as much as possible.
   TCanvas *C = new TCanvas("canvas", "canvas");
-  C -> Divide(2, 2);
+  C -> Divide(5, 2);
   C -> cd(1);
   gROOT->SetStyle("Plain");
   TF1* errEnv_top_1sigma = ErrorEnvelope_2010(1);
@@ -134,10 +139,15 @@ int main(int argc, char *argv[])
   errEnv_top_2sigma -> Draw();
 
   // Create histograms at fixed Erecon values to look at distribution of polynomials.
-  histErecon.push_back(new TH1D("test1", "Fixed Erecon = 132", 100, -15, 15));
-  histErecon.push_back(new TH1D("test2", "Fixed Erecon = 362", 100, -15, 15));
-  histErecon.push_back(new TH1D("test3", "Fixed Erecon = 502", 100, -15, 15));
-  histErecon.push_back(new TH1D("test4", "Fixed Erecon = 995", 100, -15, 15));
+  histErecon.push_back(new TH1D("test1", "Erecon = 100", 100, -15, 15));
+  histErecon.push_back(new TH1D("test2", "Erecon = 200", 100, -15, 15));
+  histErecon.push_back(new TH1D("test3", "Erecon = 300", 100, -15, 15));
+  histErecon.push_back(new TH1D("test4", "Erecon = 400", 100, -15, 15));
+  histErecon.push_back(new TH1D("test5", "Erecon = 500", 100, -15, 15));
+  histErecon.push_back(new TH1D("test6", "Erecon = 600", 100, -15, 15));
+  histErecon.push_back(new TH1D("test7", "Erecon = 700", 100, -15, 15));
+  histErecon.push_back(new TH1D("test8", "Erecon = 800", 100, -15, 15));
+  histErecon.push_back(new TH1D("test9", "Erecon = 900", 100, -15, 15));
 
   // Load the converter to get Erecon from a single EQ value.
   cout << "Using following calibration for 2010 geometry to convert Evis to Erecon..." << endl;
@@ -145,29 +155,33 @@ int main(int argc, char *argv[])
 
   ofstream outfile;
   outfile.open(PARAM_FILE_NAME, ios::app);
-  int counter = 0;
-  int numberSaved = 0;
-  for(double a = -5; a <= 5; a = a + 0.2)
+  int counter, numberSaved;
+  // Outside loop is pass number. This is to randomly sample the correct number of polynomials for each band
+  for(int i = 1; i <= 2; i++)
   {
-    for(double b = -0.2; b <= 0.2; b = b + 0.01)
+    counter = 0;
+    numberSaved = 0;
+    for(double a = -5; a <= 5; a = a + 0.2)
     {
-      for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
+      for(double b = -0.2; b <= 0.2; b = b + 0.002)
       {
-        for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
+        for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
         {
-          bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine);
-
-	  // A couple of counters and print-out statements to follow along
-	  if(save == true)
-	  {
-	    numberSaved++;
-	  }
-          if(counter % 1000 == 0)
+          for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
           {
-	    cout << "Checking thrown polynomial number... " << counter << endl;
-	  }
+            bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine, i);
 
-          counter++;
+	    // A couple of counters and print-out statements to follow along
+	    if(save == true)
+	    {
+	      numberSaved++;
+	    }
+            if(counter % 10000 == 0)
+            {
+	      cout << "Pass number " << i << ". Checking thrown polynomial number... " << counter << endl;
+	    }
+            counter++;
+          }
         }
       }
     }
@@ -176,6 +190,9 @@ int main(int argc, char *argv[])
 
   cout << "\nNumber of twiddle coefficients thrown: " << counter << endl;
   cout << "Number of twiddle coefficients saved: "<< numberSaved << "\n" << endl;
+
+  cout << "Number of polynomials in first band: " << num1sigma << endl;
+  cout << "Number of polynomials in second band: " << num2sigma << endl;
 
   // Placed here so 1 sigma error envelope goes on top.
   errEnv_top_1sigma -> SetLineStyle(2);
@@ -188,7 +205,7 @@ int main(int argc, char *argv[])
   line->Draw("SAME");
 
   // Plot all the additional Erecon slice histograms
-  for(unsigned int i = 0; i < histErecon.size() - 1; i++)
+  for(unsigned int i = 0; i < histErecon.size(); i++)
   {
     C->cd(i+2);
     histErecon[i]->Draw();
@@ -203,8 +220,13 @@ int main(int argc, char *argv[])
 }
 
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
-		      vector < vector < vector <double> > > EQ2Etrue, TRandom3* factor)
+		      vector < vector < vector <double> > > EQ2Etrue, TRandom3* factor,
+		      int passNumber)
 {
+  // booleans needed for first pass to count successes
+  bool firstBand = true;
+  bool secondBand = true;
+
   bool saveCondition = true;
   bool throwCondition = false;
 
@@ -259,64 +281,136 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
   double v2 = -10;
   double v3 = -10;
   double v4 = -10;
+  double v5 = -10;
+  double v6 = -10;
+  double v7 = -10;
+  double v8 = -10;
+  double v9 = -10;
   for(int i = 1; i <= graph->GetN(); i++)
   {
     graph->GetPoint(i, x, y);
 
     // This is to plot a Erecon slice histogram
-    if(x > 361 && x < 362)
-    {
-      v2 = y;
-    }
-    else if(x > 131 && x < 132)
+    if(x > 100 && x < 101)
     {
       v1 = y;
     }
-    else if(x > 502 && x < 503)
+    else if(x > 200 && x < 201)
+    {
+      v2 = y;
+    }
+    else if(x > 300 && x < 301)
     {
       v3 = y;
     }
-    else if(x > 994 && x < 995)
+    else if(x > 400 && x < 401)
     {
       v4 = y;
+    }
+    else if(x > 500 && x < 501)
+    {
+      v5 = y;
+    }
+    else if(x > 600 && x < 601)
+    {
+      v6 = y;
+    }
+    else if(x > 700 && x < 701)
+    {
+      v7 = y;
+    }
+    else if(x > 800 && x < 801)
+    {
+      v8 = y;
+    }
+    else if(x > 900 && x < 901)
+    {
+      v9 = y;
     }
 
     // if, at any point, we are over 2 sigma away, exit and don't save and don't throw a number.
     if(abs(y) > errEnv2->Eval(x))
     {
-      saveCondition = false;
-      throwCondition = false;
-      break;
+      if(passNumber == 1)
+      {
+        firstBand = false;
+        secondBand = false;
+        break;
+      }
+      else if(passNumber == 2)
+      {
+        saveCondition = false;
+        throwCondition = false;
+        break;
+      }
     }
     // if we are ever between 1 and 2 sigma and never outside 2 sigma, set flag to throw number to true
     else if(abs(y) > errEnv1->Eval(x) && abs(y) < errEnv2->Eval(x))
     {
-      throwCondition = true;
+      if(passNumber == 1)
+      {
+        firstBand = false;
+        secondBand = true;
+      }
+      if(passNumber == 2)
+      {
+        throwCondition = true;
+      }
     }
   }
 
-  // if our condition is tripped, means our curve lies (not exclusively from below) between 1 and 2 sigma
-  if(throwCondition == true)
+  if(passNumber == 1)
   {
-	saveCondition = false;
-    if(factor->Rndm() < 0.3)
+    if(firstBand == true)	// i.e. if we complete the search and never trip either flag, we're in first band
     {
-//      saveCondition = true;
+      secondBand = false;
+    }
+    if(firstBand == true)	// now do the counting.
+    {
+      num1sigma++;
+    }
+    else if(secondBand == true)
+    {
+      num2sigma++;
+    }
+  }
+  else if(passNumber == 2)
+  {
+    // if our condition is tripped, means our curve lies (not exclusively from below) between 1 and 2 sigma
+    if(throwCondition == true)
+    {
+      double percentageToSave = (double)num1sigma/num2sigma;
+      if(factor->Rndm() < (1 - percentageToSave))
+      {
+        saveCondition = false;
+      }
     }
   }
 
-  if(saveCondition == true)
+  if(passNumber == 2)
   {
-    histErecon[0] -> Fill(v1);
-    histErecon[1] -> Fill(v2);
-    histErecon[2] -> Fill(v3);
-    histErecon[3] -> Fill(v4);
-    // Plotting stuff
-    graph->SetLineColor(numPassed % 50);
-    graph->Draw("SAME");
+    if(saveCondition == true)
+    {
+      histErecon[0] -> Fill(v1);
+      histErecon[1] -> Fill(v2);
+      histErecon[2] -> Fill(v3);
+      histErecon[3] -> Fill(v4);
+      histErecon[4] -> Fill(v5);
+      histErecon[5] -> Fill(v6);
+      histErecon[6] -> Fill(v7);
+      histErecon[7] -> Fill(v8);
+      histErecon[8] -> Fill(v9);
+      // Plotting stuff
+      graph->SetLineColor(numPassed % 50);
+      graph->Draw("SAME");
+    }
+    // memory management. Delete the left-over pointers. Absolutely necessary or program doesn't run.
+    else if(saveCondition == false)
+    {
+      delete graph;
+    }
   }
-  // memory management. Delete the left-over pointers. Absolutely necessary or program doesn't run.
-  else if(saveCondition == false)
+  else if(passNumber == 1)
   {
     delete graph;
   }
@@ -327,6 +421,7 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
   delete delta_Erecon_East;
   delete errEnv2;
   delete errEnv1;
+
   return saveCondition;
 }
 
