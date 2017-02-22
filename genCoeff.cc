@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
   int counter, numberSaved;
   counter = 0;
   numberSaved = 0;
-  for(double a = -5; a <= 5; a = a + 0.2)
+  for(double a = -5; a <= 5; a = a + 0.4)
   {
     for(double b = -0.2; b <= 0.2; b = b + 0.002)
     {
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 				  numberSaved, converter, engine, 2, true);
     if(save2 == true)
     {
-      outfile 	<< i << "\t"
+      outfile 	<< numberSaved << "\t"
 		<< goodTwiddles[i][0] << "\t"
 		<< goodTwiddles[i][1] << "\t"
 		<< goodTwiddles[i][2] << "\t"
