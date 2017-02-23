@@ -1,15 +1,15 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
-#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/Fierz_Analysis_b_1_fullWindow_allValuesPrinted.txt"
+#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/b_0_SimProcessed_allTwiddles_100keV-650keV.txt"
 
 int main()
 {
   TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 100);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("Data/Sim_b_1/40mill_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName
-				, ReplaceWithIndexLow, ReplaceWithIndexHigh);
+  TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet", treeName, 0, 100, 42);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet", treeName, 0, 100, 42);
+  TChain *dataChain = MakeTChain("/mnt/Data/xuansun/analyzed_files/SimAnalyzed_2010_Beta_paramSet", treeName
+				, 0, 1, ReplaceWithParamIndex);
 
   TString variableName = Form("Erecon");
   TString cutsUsed = Form("type != 4 && side != 2");
@@ -29,29 +29,34 @@ int main()
   int fitMax = 65;
   fit -> SetRangeX(fitMin, fitMax);
 
-  // Setting initial search parameters.
-/*  int ipar = 0;
-  char name[3] = "a";
-  double value = 0.6;
-  double valueerr = 0.01;
-  double valuelow = -10;
-  double valuehigh = 10;
-  vfit->SetParameter(ipar, name, value, valueerr, valuelow, valuehigh);
-
-  ipar = 1;
-  char name2[3] = "c";
-  value = 0.4;
-  valueerr = 0.01;
-  valuelow = -10;
-  valuehigh = 10;
-  vfit->SetParameter(ipar, name2, value, valueerr, valuelow, valuehigh);
-*/
-
   int status = fit->Fit();
-  if(status != 0)
+
+  int fitPassNumber = 1;
+  double value = 1.2;
+  while(status != 0)
   {
-    cout << "Fit straight up didn't work. Getting out now." << endl;
-    return 0;
+    cout << "Fit unsuccessful at attempt number " << fitPassNumber << ". Trying again..." << endl;
+
+    vfit->SetParameter(0, "a", value, 0.01, -10, 10);
+    vfit->SetParameter(1, "c", 1-value, 0.01, -10, 10);
+
+    status = fit->Fit();
+
+    if(status == 0)
+    {
+      break;	// get out of our fitter.
+    }
+    else
+    {
+      value = value - 0.05;	// try again with a seed value slightly lower
+      fitPassNumber++;
+    }
+
+    if(value < 0.5)
+    {
+      cout << "Fit not successful at lowest boundary of fraction values. Exiting." << endl;
+      break;
+    }
   }
 
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
@@ -77,13 +82,14 @@ int main()
 	  << Fierz_b_Error(frac0Val, frac0Err, frac1Val, frac1Err, avg_mE,
                               vfit->GetCovarianceMatrixElement(0,0), vfit->GetCovarianceMatrixElement(0,1),
                               vfit->GetCovarianceMatrixElement(1,0), vfit->GetCovarianceMatrixElement(1,1) ) << "\t"
-	  << frac0Val << "\t"
+/*	  << frac0Val << "\t"
 	  << frac0Err << "\t"
 	  << frac1Val << "\t"
-	  << frac1Err << "\t"
+	  << frac1Err << "\t" */
           << fitMin << "\t" << fitMax << "\t"
 	  << entries << "\t"
-          << "Evts_" << ReplaceWithIndexLow << ".root" << "\t"
+          << "SimAnalyzed_2010_Beta_paramSet_" << ReplaceWithParamIndex << "_0.root" << "\t"
+	  << ReplaceWithParamIndex << "\t"
 	  << chisquared << "\t"
 	  << ndf << "\t"
 	  << chisquared/ndf << "\n";
@@ -169,13 +175,13 @@ TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
   return hist;
 }
 
-TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax)
+TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax, int paramIndex)
 {
   TChain* chain = new TChain(treeName.Data());
 
   for(int i = fileNumMin; i < fileNumMax; i++)
   {
-    chain -> AddFile(Form("%s_%i.root", baseName.Data(), i));
+    chain -> AddFile(Form("%s_%i_%i.root", baseName.Data(), paramIndex, i));
   }
 
   cout << "Loaded trees from files identified by the template: " << baseName.Data() << "_#.root \n"

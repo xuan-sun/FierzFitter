@@ -52,7 +52,7 @@ void PlotHist(TCanvas *C, int styleIndex, int canvaxIndex, TH1D *hPlot, TString 
 void PlotGraph(TCanvas *C, int styleIndex, int canvasIndex, TGraphErrors* gPlot, TString title, TString command);
 
 // Used to load files and make getting data from ROOT objects easier
-TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax);
+TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax, int paramIndex);
 TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
 			   TString name, TString title, int nbBins, double minX, double maxX);
 

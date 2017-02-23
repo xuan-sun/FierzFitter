@@ -7,24 +7,24 @@ TApplication plot_program("FADC_readin",0,0,0,0);
 
 int main()
 {
-  TString treeName = Form("Evts");
-  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100);
-  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100);
+/*  TString treeName = Form("Evts");
+  TChain *MCTheoryChainBeta = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_0_300mill/Evts", treeName, 0, 100, 42);
+  TChain *MCTheoryChainFierz = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_inf_100mill/Evts", treeName, 0, 100, 42);
   TChain *dataChain = MakeTChain("/home/xuansun/Documents/Analysis_Code/ucna_g4_2.1/UCN/UK_EventGen_2016/Evts_Files/b_1/Evts", treeName, 30, 31);
   TString variableName = Form("KE");
   TString cutsUsed = Form("");
-
+*/
 
   // Create a TChain
-/*  TString treeName = Form("SimAnalyzed");
-  TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet_42", treeName, 0, 100);
-  TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet_42", treeName, 0, 100);
-  TChain *dataChain = MakeTChain("Data/Sim_b_1/40mill_b_1/SimAnalyzed_2010_Beta_paramSet_42", treeName, 10, 11);
+  TString treeName = Form("SimAnalyzed");
+  TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet", treeName, 0, 100, 42);
+  TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet", treeName, 0, 100, 42);
+  TChain *dataChain = MakeTChain("/mnt/Data/xuansun/analyzed_files/SimAnalyzed_2010_Beta_paramSet", treeName, 0, 1, 0);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
   TString cutsUsed = Form("type != 4 && side != 2");
-*/
+
   TH1D* dataHist = ExtractHistFromChain(variableName, cutsUsed, dataChain,
 				      "myHist", "Test of comparehist code", 100, 0, 1000);
   TH1D* mcTheoryHistBeta = ExtractHistFromChain(variableName, cutsUsed, MCTheoryChainBeta,
@@ -37,35 +37,41 @@ int main()
   MCTheory -> Add(mcTheoryHistFierz);
   TFractionFitter* fit = new TFractionFitter(dataHist, MCTheory, "V");	// initialise
   TVirtualFitter* vfit = fit->GetFitter();
-  int fitMin = 0;
-  int fitMax = 80;
-  fit -> Constrain(2, 0.392613, 0.392614);
+  int fitMin = 10;
+  int fitMax = 65;
   fit -> SetRangeX(fitMin, fitMax);	// Set range in bin numbers
 
-  // Setting initial search parameters.
-/*  int ipar = 0;
-  char name[3] = "a";
-  double value = 0.999;
-  double valueerr = 0.1;
-  double valuelow = 0;
-  double valuehigh = 1.5;
-  vfit->SetParameter(ipar, name, value, valueerr, valuelow, valuehigh);
-
-  ipar = 1;
-  char name2[3] = "c";
-  value = 0.001;
-  valueerr = 0.1;
-  valuelow = -1;
-  valuehigh = 1;
-  vfit->SetParameter(ipar, name2, value, valueerr, valuelow, valuehigh);
-*/
-  // perform the fit
   int status = fit->Fit();
-  if(status != 0)
+
+  int fitPassNumber = 1;
+  double value = 1.2;
+  while(status != 0)
   {
-    cout << "Fit straight up didn't work. Getting out now." << endl;
-    return 0;
+    cout << "Fit unsuccessful at attempt number " << fitPassNumber << ". Trying again..." << endl;
+
+    vfit->SetParameter(0, "a", value, 0.01, -10, 10);
+    vfit->SetParameter(1, "c", 1-value, 0.01, -10, 10);
+
+    status = fit->Fit();
+
+    if(status == 0)
+    {
+      break;    // get out of our fitter.
+    }
+    else
+    {
+      value = value - 0.05;     // try again with a seed value slightly lower
+      fitPassNumber++;
+    }
+
+    if(value < 0.5)
+    {
+      cout << "Fit not successful at lowest boundary of fraction values. Exiting." << endl;
+      break;
+    }
   }
+
+
   TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
   int entries = 0;
   int entriesData = 0;
@@ -208,13 +214,13 @@ TH1D* ExtractHistFromChain(TString varName, TString cutsUsed, TChain* chain,
   return hist;
 }
 
-TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax)
+TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileNumMax, int paramIndex)
 {
   TChain* chain = new TChain(treeName.Data());
 
   for(int i = fileNumMin; i < fileNumMax; i++)
   {
-    chain -> AddFile(Form("%s_%i.root", baseName.Data(), i));
+    chain -> AddFile(Form("%s_%i_%i.root", baseName.Data(), paramIndex, i));
   }
 
   cout << "Loaded trees from files identified by the template: " << baseName.Data() << "_#.root" << endl;
