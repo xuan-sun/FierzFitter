@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
-#define		HIST_IMAGE_PRINTOUT_NAME	"b_0_609_twiddles_firstPass"
-#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_allTwiddles_100keV-650keV.txt"
+#define		HIST_IMAGE_PRINTOUT_NAME	"b_0_609_twiddles_secondPass_chisquaredWeight"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_allTwiddles_100keV-650keV_secondPass.txt"
 
 //required later for plot_program
 TApplication plot_program("FADC_readin",0,0,0,0);
@@ -99,10 +99,8 @@ void FillArrays(TString fileName, TH1D* hist)
                 >> evt.chisquared
 		>> evt.ndf
 		>> evt.chisquaredperdof;
-      if(evt.entriesFitted > 0)
-      {
-        hist -> Fill(evt.b);
-      }
+
+        hist -> Fill(evt.b, 1/evt.chisquaredperdof);
     }
   }
 

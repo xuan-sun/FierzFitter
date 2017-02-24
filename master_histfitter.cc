@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
-#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/b_0_SimProcessed_allTwiddles_100keV-650keV.txt"
+#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/b_0_SimProcessed_allTwiddles_100keV-650keV_secondPass.txt"
 
 int main()
 {
@@ -32,7 +32,8 @@ int main()
   int status = fit->Fit();
 
   int fitPassNumber = 1;
-  double value = 1.2;
+  double value = 1.19;
+  int entries = -100;
   while(status != 0)
   {
     cout << "Fit unsuccessful at attempt number " << fitPassNumber << ". Trying again..." << endl;
@@ -44,13 +45,23 @@ int main()
 
     if(status == 0)
     {
-      break;	// get out of our fitter.
+      TH1D* resultHist = (TH1D*)fit->GetPlot();     // extract the plot from the fit.
+      entries = 0;
+      for(int i = fitMin; i < fitMax; i++)
+      {
+        entries = entries + resultHist->GetBinContent(i);
+      }
+      if(entries > 1000)
+      {
+        break;	// get out of our fitter loop
+      }
+      else if(entries <= 0)
+      {
+        status = 1;	// set our status flag back to != 0, continue loop.
+      }
     }
-    else
-    {
-      value = value - 0.05;	// try again with a seed value slightly lower
-      fitPassNumber++;
-    }
+    value = value - 0.05;	// try again with a seed value slightly lower
+    fitPassNumber++;
 
     if(value < 0.5)
     {
@@ -59,12 +70,6 @@ int main()
     }
   }
 
-  TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
-  int entries = 0;
-  for(int i = fitMin; i < fitMax; i++)
-  {
-    entries = entries + resultHist->GetBinContent(i);
-  }
 
   double avg_mE = CalculateAveragemOverE(mcTheoryHistBeta, fitMin, fitMax);
 
@@ -82,10 +87,6 @@ int main()
 	  << Fierz_b_Error(frac0Val, frac0Err, frac1Val, frac1Err, avg_mE,
                               vfit->GetCovarianceMatrixElement(0,0), vfit->GetCovarianceMatrixElement(0,1),
                               vfit->GetCovarianceMatrixElement(1,0), vfit->GetCovarianceMatrixElement(1,1) ) << "\t"
-/*	  << frac0Val << "\t"
-	  << frac0Err << "\t"
-	  << frac1Val << "\t"
-	  << frac1Err << "\t" */
           << fitMin << "\t" << fitMax << "\t"
 	  << entries << "\t"
           << "SimAnalyzed_2010_Beta_paramSet_" << ReplaceWithParamIndex << "_0.root" << "\t"
@@ -185,7 +186,8 @@ TChain* MakeTChain(TString baseName, TString treeName, int fileNumMin, int fileN
   }
 
   cout << "Loaded trees from files identified by the template: " << baseName.Data() << "_#.root \n"
-       << "Lower index = " << fileNumMin << " and upper index = " << fileNumMax << endl;
+       << "Lower index = " << fileNumMin << " and upper index = " << fileNumMax << "\n"
+       << "Parameter (i.e. twiddle) index = " << paramIndex << endl;
 
   return chain;
 }

@@ -19,7 +19,7 @@ int main()
   TString treeName = Form("SimAnalyzed");
   TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet", treeName, 0, 100, 42);
   TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet", treeName, 0, 100, 42);
-  TChain *dataChain = MakeTChain("/mnt/Data/xuansun/analyzed_files/SimAnalyzed_2010_Beta_paramSet", treeName, 0, 1, 0);
+  TChain *dataChain = MakeTChain("/mnt/Data/xuansun/analyzed_files/SimAnalyzed_2010_Beta_paramSet", treeName, 0, 1, 7);
 
   // Get the Erecon histogram out with appropriate cuts
   TString variableName = Form("Erecon");
@@ -44,7 +44,9 @@ int main()
   int status = fit->Fit();
 
   int fitPassNumber = 1;
-  double value = 1.2;
+  double value = 1.19;
+  int entries = -100;
+  int entriesData = -100;
   while(status != 0)
   {
     cout << "Fit unsuccessful at attempt number " << fitPassNumber << ". Trying again..." << endl;
@@ -56,7 +58,22 @@ int main()
 
     if(status == 0)
     {
-      break;    // get out of our fitter.
+      TH1D* resultHist = (TH1D*)fit->GetPlot();     // extract the plot from the fit.
+      entries = 0;
+      entriesData = 0;
+      for(int i = fitMin; i < fitMax; i++)
+      {
+        entries = entries + resultHist->GetBinContent(i);
+        entriesData = entriesData + dataHist->GetBinContent(i);
+      }
+      if(entries > 0)
+      {
+        break;    // get out of our fitter loop if fit successful AND the results plot makes sense
+      }
+      else if(entries <= 0)
+      {
+        // do nothing, continue the iteration and check the next value
+      }
     }
     else
     {
@@ -72,14 +89,6 @@ int main()
   }
 
 
-  TH1D* resultHist = (TH1D*)fit->GetPlot();	// extract the plot from the fit.
-  int entries = 0;
-  int entriesData = 0;
-  for(int i = fitMin; i < fitMax; i++)
-  {
-    entries = entries + resultHist->GetBinContent(i);
-    entriesData = entriesData + dataHist->GetBinContent(i);
-  }
   cout << "Number events in fitted histogram (blue): " << entries << endl;
   cout << "Number events in data histogram (red): " << entriesData << endl;
 
@@ -109,7 +118,7 @@ int main()
   gStyle->SetStatH(0.45);
   gStyle->SetStatW(0.45);
   PlotHist(C, 1, 1, dataHist, "Data histogram", "");
-  PlotHist(C, 2, 1, resultHist, "Fit Result histogram", "SAME");
+//  PlotHist(C, 2, 1, resultHist, "Fit Result histogram", "SAME");
 
 
   // update the legend to include valuable variables.
