@@ -48,7 +48,7 @@ const double m_e = 511.00;                                              ///< ele
 
 // Input and output names and paths used in the code.
 // My pseudo version of environment variables.
-#define		PARAM_FILE_NAME		"params_2010.txt"
+#define		PARAM_FILE_NAME		"params_2010_EastWest.txt"
 #define		INPUT_EQ2ETRUE_PARAMS	"/home/xuansun/Documents/ParallelAnalyzer/simulation_comparison/EQ2EtrueConversion/2011-2012_EQ2EtrueFitParams.dat"
 
 // Plotting functions.
@@ -69,7 +69,7 @@ TF1* ErrorEnvelope_2010(double factor);
 // Return whether or not the thrown polynomial passed the save condition.
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
                       vector < vector < vector <double> > > EQ2Etrue, TRandom3 *factor,
-		      int passNumber, bool forcePlot);
+		      int passNumber, int sideIndex);
 
 // Used for visualization, keeps the graph on screen.
 TApplication plot_program("FADC_readin",0,0,0,0);
@@ -159,26 +159,30 @@ int main(int argc, char *argv[])
   int counter, numberSaved;
   counter = 0;
   numberSaved = 0;
-  for(double a = -5; a <= 5; a = a + 0.4)
+  // outer loop, j, is the side index.
+  for(int j = 0; j <= 1; j++)
   {
-    for(double b = -0.2; b <= 0.2; b = b + 0.002)
+    for(double a = -5; a <= 5; a = a + 0.4)
     {
-      for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
+      for(double b = -0.2; b <= 0.2; b = b + 0.002)
       {
-        for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
+        for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
         {
-          bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine, 1, false);
-
-          // A couple of counters and print-out statements to follow along
-	  if(save == true)
-	  {
-	    numberSaved++;
-	  }
-          if(counter % 10000 == 0)
+          for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
           {
-     	    cout << "First pass on coefficients. Checking thrown polynomial number... " << counter << endl;
-	  }
-          counter++;
+            bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine, 1, j);
+
+            // A couple of counters and print-out statements to follow along
+	    if(save == true)
+	    {
+	      numberSaved++;
+	    }
+            if(counter % 10000 == 0)
+            {
+     	      cout << "First pass on coefficients. Checking thrown polynomial number... " << counter << endl;
+	    }
+            counter++;
+          }
         }
       }
     }
@@ -187,13 +191,16 @@ int main(int argc, char *argv[])
   ofstream outfile;
   outfile.open(PARAM_FILE_NAME, ios::app);
   numberSaved = 0;
-  for(unsigned int i = 0; i < goodTwiddles.size(); i++)
+  cout << "Number of good twiddles is " << goodTwiddles.size() << endl;
+  for(int j = 0; j <= 1; j++)
   {
-    bool save2 = PerformVariation(goodTwiddles[i][0], goodTwiddles[i][1], goodTwiddles[i][2], goodTwiddles[i][3],
-				  numberSaved, converter, engine, 2, true);
-    if(save2 == true)
+    for(unsigned int i = 0; i < goodTwiddles.size(); i++)
     {
-      outfile 	<< numberSaved << "\t"
+      bool save2 = PerformVariation(goodTwiddles[i][0], goodTwiddles[i][1], goodTwiddles[i][2], goodTwiddles[i][3],
+				    numberSaved, converter, engine, 2, j);
+      if(save2 == true)
+      {
+        outfile	<< numberSaved << "\t"
 		<< goodTwiddles[i][0] << "\t"
 		<< goodTwiddles[i][1] << "\t"
 		<< goodTwiddles[i][2] << "\t"
@@ -203,11 +210,8 @@ int main(int argc, char *argv[])
 		<< goodTwiddles[i][2] << "\t"
 		<< goodTwiddles[i][3] << "\n";
 
-      numberSaved++;
-    }
-    if(i % 1000 == 0)
-    {
-      cout << "Processing stored polynomials... Progress: " << i << "/" << goodTwiddles.size() << endl;
+        numberSaved++;
+      }
     }
   }
 
@@ -246,7 +250,7 @@ int main(int argc, char *argv[])
 
 bool PerformVariation(double a, double b, double c, double d, int numPassed,
 		      vector < vector < vector <double> > > EQ2Etrue, TRandom3* factor,
-		      int passNumber, bool forcePlot)
+		      int passNumber, int sideIndex)
 {
   // booleans needed for first pass to count successes
   bool firstBand = true;
@@ -267,9 +271,7 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
   twiddle_Evis -> SetParameter(3, d);
 
   // Calculate Erecon
-  int typeIndex = 0;    // Since we are doing calibration curves on East/West scintillators,
-                        // it is equivalent to looking at a spectrum of type 0's.
-  int sideIndex = 0;    // testing just the Erecons due to East side calibration
+  int typeIndex = 0;
 
   // Create our twiddled and untwiddled functions in Erecon space.
   TF1 *Erecon0_East = new TF1("Erecon0", EreconFunction(EQ2Etrue, typeIndex, sideIndex, pure_Evis), xMin, xMax, 0);
