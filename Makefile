@@ -28,7 +28,7 @@ all: $(source)
 $(source): $(objects)
 	$(CXX) $(CXXFLAGS) -o $(source) $(objects) $(LIBS)
 
-#histfitter.o: comparehist.hh
+#plotFierz.o: comparehist.hh
 
 # -------------------------------------------------------------------------------
 #  Generic compilation and linking step to make an executable from

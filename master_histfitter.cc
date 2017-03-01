@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
-#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/b_0_SimProcessed_allTwiddles_100keV-650keV_secondPass.txt"
+#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_firstPass.txt"
 
 int main()
 {

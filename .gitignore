@@ -4,3 +4,4 @@ Test_comparehist.pdf
 LogFiles/*
 AnalyzedTextFiles/*
 *.pdf
+*.root

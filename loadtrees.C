@@ -1,14 +1,7 @@
-#include "comparehist.hh"
+#include	"comparehist.hh"
 
-#define		HIST_IMAGE_PRINTOUT_NAME	"b_0_2457_twiddles_firstPass_noWeight"
 #define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_firstPass.txt"
 #define		INPUT_PARAM_FILE		"/mnt/Data/xuansun/analyzed_files/matchingParams_2010_0.dat"
-
-//required later for plot_program
-TApplication plot_program("FADC_readin",0,0,0,0);
-
-void PlotHist(TCanvas *C, int styleIndex, int canvaxIndex, TH1D *hPlot, TString title, TString command);
-void FillArrays(TString fileName, TString paramFile, TH1D *hist);
 
 struct event
 {
@@ -37,53 +30,39 @@ struct event
 };
 
 
-int main()
+void loadtrees()
 {
-  TCanvas *C = new TCanvas("canvas", "canvas");
-  gROOT -> SetStyle("Plain");	//on my computer this sets background to white, finally!
-
-  TH1D *h1 = new TH1D("myhist", "myhist", 100, -1, 1);
-
-  FillArrays(INPUT_DATA_FILE, INPUT_PARAM_FILE, h1);
-
-  PlotHist(C, 1, 1, h1, "Extracted b values.", "");
-
-  //prints the canvas with a dynamic TString name of the name of the file
-  C -> Print(Form("%s.pdf", HIST_IMAGE_PRINTOUT_NAME));
-  cout << "-------------- End of Program ---------------" << endl;
-  plot_program.Run();
-
-  return 0;
-}
-void PlotHist(TCanvas *C, int styleIndex, int canvasIndex, TH1D *hPlot, TString title, TString command)
-{
-  C -> cd(canvasIndex);
-  hPlot -> SetTitle(title);
-  hPlot -> GetXaxis() -> SetTitle("Extracted b");
-  hPlot -> GetXaxis() -> CenterTitle();
-  hPlot -> GetYaxis() -> SetTitle("N(b)");
-  hPlot -> GetYaxis() -> CenterTitle();
-//  hPlot -> GetYaxis() -> SetRangeUser(0, 0.000004);
-
-  if(styleIndex == 1)
-  {
-    hPlot -> SetFillColor(46);
-    hPlot -> SetFillStyle(3004);
-  }
-  if(styleIndex == 2)
-  {
-    hPlot -> SetFillColor(38);
-    hPlot -> SetFillStyle(3005);
-  }
-
-  hPlot -> Draw(command);
+  TFile file("fitter_tree.root", "RECREATE");
+  TTree* fitTree = new TTree("fitTree", "tree for examining fit results");
+  FillArrays(INPUT_DATA_FILE, INPUT_PARAM_FILE, fitTree);
+  fitTree->Write();
 }
 
-void FillArrays(TString fileName, TString paramFile, TH1D* hist)
+void FillArrays(TString fileName, TString paramFile, TTree* tree)
 {
 
   event evt;
-  int counter = 0;
+
+  // set branches
+  tree -> Branch("b", &evt.b, "evt.b/D");
+  tree -> Branch("mOverE", &evt.avg_mOverE, "evt.ave_mOverE/D");
+  tree -> Branch("bError", &evt.calcErr, "evt.bError/D");
+  tree -> Branch("binMin", &evt.binMin, "evt.binMin/I");
+  tree -> Branch("binMax", &evt.binMax, "evt.binmax/I");
+  tree -> Branch("entries", &evt.entriesFitted, "evt.entriesFitted/I");
+  tree -> Branch("paramNumber", &evt.fileNum, "evt.fileNum/I");
+  tree -> Branch("chisquared", &evt.chisquared, "evt.chisquared/D");
+  tree -> Branch("ndf", &evt.ndf, "evt.ndf/I");
+  tree -> Branch("chisquaredperdof", &evt.chisquaredperdof, "evt.chisquaredperdof/D");
+  tree -> Branch("paramIndex", &evt.index, "evt.index/I");
+  tree -> Branch("East_a", &evt.ea, "evt.ea/D");
+  tree -> Branch("East_b", &evt.eb, "evt.eb/D");
+  tree -> Branch("East_c", &evt.ec, "evt.ec/D");
+  tree -> Branch("East_d", &evt.ed, "evt.ed/D");
+  tree -> Branch("West_a", &evt.wa, "evt.wa/D");
+  tree -> Branch("West_b", &evt.wb, "evt.wb/D");
+  tree -> Branch("West_c", &evt.wc, "evt.wc/D");
+  tree -> Branch("West_d", &evt.wd, "evt.wd/D");
 
   //opens the file that I name in DATA_FILE_IN
   string buf1;
@@ -133,17 +112,15 @@ void FillArrays(TString fileName, TString paramFile, TH1D* hist)
 		>> evt.wc
 		>> evt.wd;
 
-//      if(abs(evt.b) > 0.2)
-      {
-	counter++;
-        hist -> Fill(evt.b);
-      }
     }
 
     if(infile1.eof() == true || infile2.eof() == true)
     {
       break;
     }
+
+
+    tree->Fill();
   }
 
   cout << "Data from " << fileName << " has been filled into all arrays successfully." << endl;
