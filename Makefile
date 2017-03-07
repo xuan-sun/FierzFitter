@@ -19,8 +19,8 @@ LIBS          = $(ROOTLIBS) $(ROOTGLIBS)
 CXXFLAGS     += $(ROOTCFLAGS)
 LIBS         += -lSpectrum -lMinuit
 
-objects = genCoeff.o
-source = genCoeff
+objects = plotFierz.o
+source = plotFierz
 
 .PHONY: all
 all: $(source)
@@ -28,7 +28,7 @@ all: $(source)
 $(source): $(objects)
 	$(CXX) $(CXXFLAGS) -o $(source) $(objects) $(LIBS)
 
-#plotFierz.o: comparehist.hh
+plotFierz.o: comparehist.hh
 
 # -------------------------------------------------------------------------------
 #  Generic compilation and linking step to make an executable from

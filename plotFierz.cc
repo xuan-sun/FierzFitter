@@ -1,7 +1,7 @@
 #include "comparehist.hh"
 
-#define		HIST_IMAGE_PRINTOUT_NAME	"b_0_2457_twiddles_firstPass_noWeight"
-#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_firstPass.txt"
+#define		HIST_IMAGE_PRINTOUT_NAME	"b_0_2457_twiddles_secondPass"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_secondPass.txt"
 #define		INPUT_PARAM_FILE		"/mnt/Data/xuansun/analyzed_files/matchingParams_2010_0.dat"
 
 //required later for plot_program
@@ -133,7 +133,7 @@ void FillArrays(TString fileName, TString paramFile, TH1D* hist)
 		>> evt.wc
 		>> evt.wd;
 
-//      if(abs(evt.b) > 0.2)
+      if(evt.ed == 0)
       {
 	counter++;
         hist -> Fill(evt.b);

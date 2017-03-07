@@ -1,7 +1,7 @@
 #include	"comparehist.hh"
 
-#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_firstPass.txt"
-#define		INPUT_PARAM_FILE		"/mnt/Data/xuansun/analyzed_files/matchingParams_2010_0.dat"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_secondPass.txt"
+#define		INPUT_PARAM_FILE		"/mnt/Data/xuansun/analyzed_files_statDependent/matchingParams_2010_0.dat"
 
 struct event
 {
@@ -32,7 +32,7 @@ struct event
 
 void loadtrees()
 {
-  TFile file("fitter_tree.root", "RECREATE");
+  TFile file("fitter_tree_secondPass.root", "RECREATE");
   TTree* fitTree = new TTree("fitTree", "tree for examining fit results");
   FillArrays(INPUT_DATA_FILE, INPUT_PARAM_FILE, fitTree);
   fitTree->Write();
