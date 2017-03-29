@@ -19,8 +19,8 @@ LIBS          = $(ROOTLIBS) $(ROOTGLIBS)
 CXXFLAGS     += $(ROOTCFLAGS)
 LIBS         += -lSpectrum -lMinuit
 
-objects = plotFierz.o
-source = plotFierz
+objects = fracResiduals.o
+source = fracResiduals
 
 .PHONY: all
 all: $(source)
