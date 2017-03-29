@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
   C -> cd(1);
   gROOT->SetStyle("Plain");
   TF1* line = new TF1("origin", "0", 0, 1000);
-  line -> GetYaxis() -> SetRangeUser(-0.25, 0.25);
+  line -> GetYaxis() -> SetRangeUser(-0.25, 0.15);
   line -> GetYaxis() -> SetTitle("E_{recon} Error Fraction");
   line -> GetXaxis() -> SetTitle("E_{recon} (keV)");
   line -> SetTitle("Fractional Spectrum Variations");
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
     }
 
     // at the level of each line read-in, i.e. each loop, perform twiddle and plot the residual
-    if(index == 2)	// this if statement ensures we only plot a fixed number, not all
+    if(index == 2 || index == 5 || index==577 || index==588)	// this if statement ensures we only plot a fixed number, not all
     {
 									// 0 = East side calib, start with that
       bool save = PerformVariation(ae, be, ce, de, index, converter, engine, 2, 0);
@@ -191,10 +191,11 @@ int main(int argc, char *argv[])
 
   int n = 10;
   double x[] = {70, 150, 200, 250, 300, 350, 400, 450, 500, 550};
-  double y[] = {-0.23, -0.009, };
+  double y[] = {-0.23, -0.0091, -0.0081, -0.0051, 0.0013, 0.0041, 0.0061, 0, 0.0021, -0.0042};
 
-  TGraph* mpm_frac = new TGraph()
-
+  TGraph* mpm_frac = new TGraph(n, x, y);
+  mpm_frac -> SetMarkerStyle(22);
+  mpm_frac -> Draw("SAMEP");
 
 
   // Save our plot and print it out as a pdf.
@@ -340,7 +341,7 @@ bool PerformVariation(double a, double b, double c, double d, int numPassed,
     if(saveCondition == true)
     {
       // Plotting stuff
-      graph->SetLineColor(numPassed % 50);
+      graph->SetMarkerColor(numPassed % 50);
       graph->Draw("SAMEP");
     }
     // memory management. Delete the left-over pointers. Absolutely necessary or program doesn't run.
