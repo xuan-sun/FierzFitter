@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 
   // Start the plotting stuff so we can loop and use "SAME" as much as possible.
   TCanvas *C = new TCanvas("canvas", "canvas");
-  C -> Divide(5, 2);
+//  C -> Divide(5, 2);
   C -> cd(1);
   gROOT->SetStyle("Plain");
   TF1* errEnv_top_1sigma = ErrorEnvelope_2010(1);
@@ -168,8 +168,8 @@ int main(int argc, char *argv[])
       {
         for(double c = -1e-5; c <= 1e-5; c = c + 5e-6)
         {
-          for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
-//	  for(double d = 0; d <= 0; d++)
+//          for(double d = -1e-7; d <= 1e-7; d = d + 5e-8)
+	  for(double d = 0; d <= 0; d++)
           {
             bool save = PerformVariation(a, b, c, d, numberSaved, converter, engine, 1, j);
 
@@ -235,12 +235,12 @@ int main(int argc, char *argv[])
   line->Draw("SAME");
 
   // Plot all the additional Erecon slice histograms
-  for(unsigned int i = 0; i < histErecon.size(); i++)
+/*  for(unsigned int i = 0; i < histErecon.size(); i++)
   {
     C->cd(i+2);
     histErecon[i]->Draw();
   }
-
+*/
   // Save our plot and print it out as a pdf.
   C -> Print("output_genCoeff.pdf");
   cout << "-------------- End of Program ---------------" << endl;

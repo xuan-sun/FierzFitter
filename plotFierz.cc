@@ -1,7 +1,7 @@
 #include "comparehist.hh"
 
-#define		HIST_IMAGE_PRINTOUT_NAME	"b_0_2457_twiddles_secondPass"
-#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_secondPass.txt"
+#define		HIST_IMAGE_PRINTOUT_NAME	"b_0_notwiddles_statistical error"
+#define		INPUT_DATA_FILE			"AnalyzedTextFiles/b_0_SimProcessed_noTwiddles_100keV-650keV_firstPass_forStatError.txt"
 #define		INPUT_PARAM_FILE		"/mnt/Data/xuansun/analyzed_files/matchingParams_2010_0.dat"
 
 //required later for plot_program
@@ -42,14 +42,17 @@ int main()
   TCanvas *C = new TCanvas("canvas", "canvas");
   gROOT -> SetStyle("Plain");	//on my computer this sets background to white, finally!
 
-  TH1D *h1 = new TH1D("myhist", "myhist", 100, -1, 1);
+  TH1D *h1 = new TH1D("myhist", "myhist", 50, -0.05, 0.05);
 
   FillArrays(INPUT_DATA_FILE, INPUT_PARAM_FILE, h1);
+
+  gStyle->SetOptStat("mr");
+  gStyle->SetOptTitle(0);
 
   PlotHist(C, 1, 1, h1, "Extracted b values.", "");
 
   //prints the canvas with a dynamic TString name of the name of the file
-  C -> Print(Form("%s.pdf", HIST_IMAGE_PRINTOUT_NAME));
+  C -> Print(Form("%s.png", HIST_IMAGE_PRINTOUT_NAME));
   cout << "-------------- End of Program ---------------" << endl;
   plot_program.Run();
 
@@ -94,23 +97,23 @@ void FillArrays(TString fileName, TString paramFile, TH1D* hist)
   //a check to make sure the file is open
   if(!infile1.is_open())
     cout << "Problem opening " << fileName << endl;
-
+/*
   string buf2;
   ifstream infile2;
   cout << "The file being opened is: " << paramFile << endl;
   infile2.open(paramFile);
   if(!infile2.is_open())
     cout << "Problem opening " << paramFile << endl;
-
+*/
   while(true)
   {
     getline(infile1, buf1);
     istringstream bufstream1(buf1);
 
-    getline(infile2, buf2);
+/*    getline(infile2, buf2);
     istringstream bufstream2(buf2);
-
-    if(!infile1.eof() && !infile2.eof())
+*/
+    if(!infile1.eof() /*&& !infile2.eof()*/)
     {
       bufstream1 >> evt.b
 		>> evt.avg_mOverE
@@ -123,7 +126,7 @@ void FillArrays(TString fileName, TString paramFile, TH1D* hist)
                 >> evt.chisquared
 		>> evt.ndf
 		>> evt.chisquaredperdof;
-      bufstream2 >> evt.index
+/*      bufstream2 >> evt.index
 		>> evt.ea
 		>> evt.eb
 		>> evt.ec
@@ -132,15 +135,15 @@ void FillArrays(TString fileName, TString paramFile, TH1D* hist)
 		>> evt.wb
 		>> evt.wc
 		>> evt.wd;
-
-      if(evt.ed == 0)
+*/
+//      if(evt.ed == 0)
       {
 	counter++;
         hist -> Fill(evt.b);
       }
     }
 
-    if(infile1.eof() == true || infile2.eof() == true)
+    if(infile1.eof() == true /*|| infile2.eof() == true*/)
     {
       break;
     }

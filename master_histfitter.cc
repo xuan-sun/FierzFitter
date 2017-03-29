@@ -1,15 +1,15 @@
 #include	"comparehist.hh"
 
 #define		HIST_IMAGE_PRINTOUT_NAME	"Test_master_histfitter"
-#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/b_0_SimProcessed_EastWest_allTwiddles_100keV-650keV_secondPass.txt"
+#define		OUTPUT_ANALYSIS_FILE		"AnalyzedTextFiles/b_0_SimProcessed_noTwiddles_100keV-650keV_firstPass_forStatError.txt"
 
 int main()
 {
   TString treeName = Form("SimAnalyzed");
   TChain *MCTheoryChainBeta = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet", treeName, 0, 100, 42);
   TChain *MCTheoryChainFierz = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_fierz_paramSet", treeName, 0, 100, 42);
-  TChain *dataChain = MakeTChain("/mnt/Data/xuansun/analyzed_files/SimAnalyzed_2010_Beta_paramSet", treeName
-				, 0, 1, ReplaceWithParamIndex);
+  TChain *dataChain = MakeTChain("Data/BigSims_b_xsunCode/SimAnalyzed_2010_Beta_paramSet", treeName
+				, ReplaceWithIndexLow, ReplaceWithIndexHigh, 42);
 
   TString variableName = Form("Erecon");
   TString cutsUsed = Form("type != 4 && side != 2");
@@ -89,8 +89,8 @@ int main()
                               vfit->GetCovarianceMatrixElement(1,0), vfit->GetCovarianceMatrixElement(1,1) ) << "\t"
           << fitMin << "\t" << fitMax << "\t"
 	  << entries << "\t"
-          << "SimAnalyzed_2010_Beta_paramSet_" << ReplaceWithParamIndex << "_0.root" << "\t"
-	  << ReplaceWithParamIndex << "\t"
+          << "SimAnalyzed_2010_Beta_paramSet_" << 42 << "_" << ReplaceWithIndexLow << ".root" << "\t"
+	  << ReplaceWithIndexLow << "\t"
 	  << chisquared << "\t"
 	  << ndf << "\t"
 	  << chisquared/ndf << "\n";

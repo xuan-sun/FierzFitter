@@ -36,11 +36,41 @@ void loadtrees()
   TTree* fitTree = new TTree("fitTree", "tree for examining fit results");
   FillArrays(INPUT_DATA_FILE, INPUT_PARAM_FILE, fitTree);
   fitTree->Write();
+
+
+  int nEntries = fitTree- > GetEntries();
+
+  double chisquared_used = 0;
+  int ndf_used = 0;
+  double ed_used = 0;
+  double wd_used = 0;
+
+  fitTree -> SetBranchAddress("chisquared", &chisquared_used);
+  fitTree -> SetBranchAddress("ndf", &ndf_used);
+  fitTree -> SetBranchAddress("East_d", &ed_used);
+  fitTree -> SetBranchAddress("West_d", &wd_used);
+
+  double totalProbWithCuts = 0;
+
+  for(int i = 0; i < nEntries; i++)
+  {
+    fitTree->GetEntry(i);
+    // These are the cuts we are applying
+    if(ed_used == 0 && wd_used == 0)
+    {
+      totalProbWithCuts = totalProbWithCuts + TMath::Prob(chisquared_used, ndf_used);
+    }
+  }
+
+  gStyle->SetOptStat("mr");
+  gStyle->SetOptTitle(0);
+
+//  fitTree -> Draw("b", Form("(TMath::Prob(chisquared, ndf) / %f)*(East_d == 0 && West_d == 0)", totalProbWithCuts));
+  fitTree -> Draw("b", "(1/sqrt(chisquaredperdof)) * (East_d == 0 && West_d == 0)");
 }
 
 void FillArrays(TString fileName, TString paramFile, TTree* tree)
 {
-
   event evt;
 
   // set branches
@@ -119,9 +149,9 @@ void FillArrays(TString fileName, TString paramFile, TTree* tree)
       break;
     }
 
-
     tree->Fill();
   }
 
   cout << "Data from " << fileName << " has been filled into all arrays successfully." << endl;
+
 }
